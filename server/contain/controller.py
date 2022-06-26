@@ -1,6 +1,6 @@
 import logging
 from quickpython.component.session import Session
-from quickpython.tornado.exception import *
+from quickpython.server.exception import *
 
 
 class Controller:

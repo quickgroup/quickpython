@@ -1,7 +1,7 @@
 """
     框架
 """
-from quickpython.tornado.server import Core
+from quickpython.server.server import Core
 
 
 class Boot:

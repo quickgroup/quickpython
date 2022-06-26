@@ -3,7 +3,7 @@
 """
 import logging
 from libs.utils import BaseClass
-from quickpython.tornado.processor import ProcessorController
+from quickpython.server.processor import ProcessorController
 
 logger = logging.getLogger(__name__)
 
