@@ -1,5 +1,5 @@
 # quickpython-mvc
-`MVC` `fast` `CRUD` `ORM` `thinkphp5` `database` `chained`
+`MVC` `fast` `CRUD` `ORM` `database` `chained`
 
 
 ```
