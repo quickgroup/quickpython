@@ -12,8 +12,8 @@ class DemoModel:
 
     def call(self):
         """"""
-        # self.base()
-        self.join()
+        self.base()
+        # self.join()
 
     def base(self):
         # self.save()
@@ -56,11 +56,31 @@ class DemoModel:
         logger.info("更新成功")
 
     def get(self):
-        user_4 = UserModel().where(UserModel.username == "test4").get()
-        if user_4 is None:
-            raise Exception("未找到nickname = test4 的数据")
-        logger.info("user_4={}".format(user_4.id))
-        logger.info("user_4={}".format(user_4))
+        """查询"""
+        # user_4 = UserModel().where(UserModel.username == "lo106258").get()
+        # if user_4 is None: raise Exception("未找到nickname = test4 的数据")
+        # logger.info("user_4={}".format(user_4))
+        # 参数条件查询
+        # user_5 = UserModel().where(username="lo106258").get()
+        # if user_5 is None: raise Exception("未找到user_5数据")
+        # logger.info("user_5={}".format(user_5))
+
+        # 包含标签
+        user_5_2 = UserModel().where(id__in=["40830", "40831"]).select()
+        if user_5_2 is None: raise Exception("未找到 user_5_2 数据")
+        logger.info("user_5_2={}".format(user_5_2))
+        user_5_3 = UserModel().where(id__not_in=["40830", "40831"]).select()
+        if user_5_3 is None: raise Exception("未找到 user_5_3 数据")
+        logger.info("user_5_3={}".format(user_5_3))
+
+        # 比较标签
+        # for it in "eq,neq,gt,egt,lt,elt".split(','):
+        #     field = "id__" + it
+        #     user_5_4 = UserModel().where(**{field: 40830}).select()
+        #     if user_5_4 is None:
+        #         raise Exception("未找到 条件{}的 user_5_4 数据".format(field))
+        #     logger.info("user_5_4={}".format(user_5_4))
+
         # 多条
         # user_rows = UserModel().where(UserModel.username == "test4").select()
         # logger.info("user_rows={}:{}".format(len(user_rows), user_rows))

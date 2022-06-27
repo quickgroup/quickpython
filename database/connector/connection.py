@@ -32,7 +32,7 @@ class Connection:
         self.config = {**self.config, **setttings.DATABASES['default']}
         self.config['port'] = int(self.config['port']) if not_empty(self.config['port']) else 3306
         self.config['wait_timeout'] = int(self.config['wait_timeout'])
-        # self.log.setLevel(logging.DEBUG if self.get_config('echo') else logging.INFO)
+        self.log.setLevel(logging.DEBUG if self.get_config('echo', True) else logging.INFO)
 
     def get_config(self, name, def_val=None):
         if name in self.config:

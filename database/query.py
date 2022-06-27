@@ -216,6 +216,7 @@ class QuerySet(object):
     __op_in = {
         'in': 'IN',
         'not in': 'NOT IN',
+        'not_in': 'NOT IN',
         'exists': 'EXISTS',
     }
 

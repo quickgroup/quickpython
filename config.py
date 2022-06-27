@@ -39,6 +39,7 @@ class Config:
     @classmethod
     def logging_init(cls):
         """初始化日志模块"""
+        logging.getLogger("asyncio").setLevel(logging.WARNING)
         logging.getLogger("matplotlib").setLevel(logging.WARNING)
         logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
         # 控制台

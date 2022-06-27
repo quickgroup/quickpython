@@ -89,6 +89,8 @@ class Model:
         if len(kwargs) > 0:
             for it, val in kwargs.items():
                 if it.find('__') > -1:
+                    if val is None or len(val) == 0:
+                        return self
                     it_arr = it.split('__')
                     self.__query__ = self.__query__.where({it_arr[0]: [it_arr[1], val]})
                 else:
