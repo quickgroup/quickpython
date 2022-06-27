@@ -48,7 +48,6 @@ class Core:
             'ui_methods': SETTINGS['ui_methods'],
         })  # , debug=SETTINGS['debug'])
         # 启动web
-        cls.log.info("WEB start port " + str(SETTINGS['port']))
         server = cls.server = tornado.web.HTTPServer(application, decompress_request=True)
         if sys.platform == "win32":
             server.listen(SETTINGS['port'])
@@ -56,7 +55,7 @@ class Core:
             server.bind(SETTINGS['port'])
             server.start(Config.web_pro_count(SETTINGS['pro_thr_num']))
 
-        cls.log.debug("web start complete.")
+        cls.log.info("WEB start complete, port={}".format(SETTINGS['port']))
         tornado.ioloop.IOLoop.instance().start()
         # 关闭
         # tornado.ioloop.IOLoop.current().stop()
