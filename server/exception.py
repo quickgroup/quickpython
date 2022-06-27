@@ -1,8 +1,11 @@
 
 
-class ResponseException(Exception):
-    def __init__(self, msg=None):
-        Exception.__init__(self, msg)
+class AppException(Exception):
+    pass
+
+
+class ResponseException(AppException):
+    pass
 
 
 class ResponseRenderException(ResponseException):

@@ -49,7 +49,7 @@ class Core:
         })  # , debug=SETTINGS['debug'])
         # 启动web
         server = cls.server = tornado.web.HTTPServer(application, decompress_request=True)
-        if sys.platform == "win32":
+        if Config.IS_WIN32:
             server.listen(SETTINGS['port'])
         else:
             server.bind(SETTINGS['port'])

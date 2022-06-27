@@ -14,6 +14,8 @@ options = setttings.DATABASES['default']['options']
 
 
 def format_field(name):
+    if name is None or len(name) == 0:
+        return name
     if options['field_sep'] is None or options['field_sep'] is True:
         arr = name.split(".")
         return "`{}`".format(name) if len(arr) == 1 else "`{}`.`{}`".format(arr[0], arr[1])
@@ -57,7 +59,6 @@ class QuerySet(object):
 
     def __init__(self):
         self.__map = {}
-        self.__database = self.__conn.config['database']
         self.__table = ''
         self.__fields = []
         self.__where = {}
@@ -70,14 +71,16 @@ class QuerySet(object):
             'multi': {},
             'where': {},
         }
-        self.prefix = self.__conn.get_config("prefix", '')
+        conn = self.get_connect()
+        self.prefix = conn.get_config("prefix", '')
+        self.__database = conn.config['database']
 
-    @property
-    def __conn(self):
+    @staticmethod
+    def get_connect():
         return Connection.get_connect()
 
     def __close(self):
-        self.__conn.close()
+        self.get_connect().close()
 
     @property
     def __self(self):
@@ -91,6 +94,11 @@ class QuerySet(object):
     def table(self, table):
         self.__table = table
         return self
+
+    def __table_name_sql__(self):
+        table_name = '' if empty(self.prefix) else self.__table
+        table_name = "{}{}".format(format_field(self.__table__), format_field(table_name))
+        return table_name
 
     def where(self, field, op=None, condition=None):
         self.__parse_where_exp("AND", field, op, condition)
@@ -263,9 +271,7 @@ class QuerySet(object):
 
         fields = ','.join(self.__fields)
         sa.append("{}".format(fields if len(fields) > 0 else '*'))
-
-        table_name = '' if self.prefix == '' else ' `{}`'.format(self.__table)
-        sa.append("FROM {}{}".format(self.__table__, table_name))
+        sa.append("FROM {}".format(self.__table_name_sql__()))
         if self.__alias != '':
             sa.append(self.__alias)
 
@@ -321,7 +327,7 @@ class QuerySet(object):
 
         # sql += " LIMIT 1"
         # logger.debug("{} {}".format(id(self.__conn), sql))
-        count, result, field_info = self.__conn.execute_all(sql)
+        count, result, field_info = self.get_connect().execute_all(sql)
         if result is None or len(result) == 0:
             return None
 
@@ -339,7 +345,7 @@ class QuerySet(object):
         if sql is None:
             return None
 
-        count, result, field_info = self.__conn.execute_all(sql)
+        count, result, field_info = self.get_connect().execute_all(sql)
         ret = []
 
         for index, item in enumerate(result):
@@ -354,7 +360,7 @@ class QuerySet(object):
     def value(self, field):
         self.__fields = [field]
         sql = self.__com_query_sql()
-        count, result, _ = self.__conn.execute(sql)
+        count, result, _ = self.get_connect().execute(sql)
         if result is not None:
             return result[0]
         else:
@@ -376,7 +382,7 @@ class QuerySet(object):
             return 0
 
         sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
-        return self.__conn.execute(sql)[0]
+        return self.get_connect().execute(sql)[0]
 
     def insert_get_id(self, data):
         if isinstance(data, dict) is False:
@@ -393,7 +399,7 @@ class QuerySet(object):
         sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
 
         # 执行
-        count, ret, pk = self.__conn.execute_get_id(sql)
+        count, ret, pk = self.get_connect().execute_get_id(sql)
         # logger.debug("pk={}".format(pk))
         return pk
 
@@ -411,7 +417,7 @@ class QuerySet(object):
 
         if len(self.__map) == 0:
             raise Exception("禁止不使用 where 更新数据")
-        sql_where = self.__com_where_sql()
+        where_str = self.__com_where_sql()
 
         fields = []
         for key, val in data.items():
@@ -421,20 +427,20 @@ class QuerySet(object):
             return 0
 
         # 表名、更新的字段、限制条件
-        sql = "UPDATE {} SET {} {}".format(format_field(self.__table__), ", ".join(fields), sql_where)
-        count, ret, _ = self.__conn.execute(sql)
+        sql = "UPDATE {} SET {} {}".format(format_field(self.__table__), ", ".join(fields), where_str)
+        count, ret, _ = self.get_connect().execute(sql)
         return count
 
     def set_option(self, key, val):
         return self.update({key: val})
 
     def delete(self):
-        sql_where = self.__com_where_sql()
-        if len(sql_where.strip()) == 0:
+        where_str = self.__com_where_sql()
+        if len(where_str.strip()) == 0:
             raise Exception("禁止不使用 where 删除数据")
 
-        sql = "DELETE FROM {} {}".format(self.__table__, sql_where)
-        count, result, _ = self.__conn.execute(sql)
+        sql = "DELETE FROM {} {}".format(self.__table_name_sql__(), where_str)
+        count, result, _ = self.get_connect().execute(sql)
         return count
 
     def set_inc(self, key, step=1):
@@ -444,7 +450,7 @@ class QuerySet(object):
         return self.update({key: key + '-' + str(step)})
 
     def query(self, sql):
-        count, ret, _ = self.__conn.execute(sql)
+        count, ret, _ = self.get_connect().execute(sql)
         return ret
 
     @staticmethod
@@ -479,7 +485,7 @@ class QuerySet(object):
             count, list_data, field_info = cache_data
         else:
             sql = "SHOW FULL COLUMNS FROM `{}`".format(table)
-            count, list_data, field_info = self.__conn.execute_all(sql)
+            count, list_data, field_info = self.get_connect().execute_all(sql)
             self.__set_cache(ck, (count, list_data, field_info))
 
         if full_name:
@@ -546,3 +552,23 @@ class QuerySet(object):
 
 class Db(QuerySet):
     """"""
+
+
+class Transaction:
+
+    def __init__(self):
+        self.query_set = QuerySet()
+
+    def __enter__(self):
+        logger.debug("开启事务")
+        self.query_set.start_trans()
+
+    def __exit__(self, exc_type, value, traceback):
+        if exc_type is None:
+            logger.debug("提交事务")
+            self.query_set.commit()
+            return True
+        else:
+            logger.debug("回滚事务")
+            self.query_set.rollback()
+            return False

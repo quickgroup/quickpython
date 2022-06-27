@@ -4,7 +4,7 @@
 
 import logging, copy
 from .query import QuerySet
-from .contain.columns import ColumnCmp, iscolumn, ModelAttr
+from .contain.columns import *
 from .contain.func import *
 
 
@@ -12,14 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 class Model:
-    """
-    对基础的db方法进行ORM扩展和适配
-    """
+    """模型基类"""
     __table__ = None        # 模型对象数据表表名
-    __table_pk__ = None     # 主键
+    __table_pk__ = None     # type:ColumnBase , 主键
     __table_args__ = None   # 表加参数
     __table_fields__ = None # 模型的字段列表
     __attrs__ = None        # 模型显示的属性
+    __soft_delete__ = None  # 模型显示的属性
     __relation__ = None     # 被关联信息
     __parent__ = []         # 父模型
     __origin__ = {}         # 原始数据（数据查询
@@ -65,7 +64,7 @@ class Model:
             obj = cls.__getattribute__(cls, name, True)
             if isfunction(obj):
                 continue
-            if iscolumn(obj.__class__):
+            if isinstance(obj, ColumnBase):
                 # logger.debug("加载模型字段 cls={}, name={}, obj={}".format(cls, name, obj))
                 obj.name = name
                 if obj.primary_key:
@@ -73,6 +72,9 @@ class Model:
                     cls.__table_pk__ = obj
                 cls.__table_fields__[name] = obj
                 cls.__attrs__[name] = obj
+                # 软删除字段：只能存在一个
+                if obj.soft:
+                    cls.__soft_delete__ = obj
 
             if issubclass(obj.__class__, RelationModel):
                 obj.name = name
@@ -83,7 +85,16 @@ class Model:
     def where(self, *args, **kwargs):
         args = list(args)
         where = {'key': None, 'type': '=', 'val': None}
-        if len(args) > 0 and isinstance(args[0], ColumnCmp):
+        # 字典查询条件
+        if len(kwargs) > 0:
+            for it, val in kwargs.items():
+                if it.find('__') > -1:
+                    it_arr = it.split('__')
+                    self.__query__ = self.__query__.where({it_arr[0]: [it_arr[1], val]})
+                else:
+                    self.__query__ = self.__query__.where(it, "=", val)
+            return self
+        elif len(args) > 0 and isinstance(args[0], ColumnCmp):
             where = args[0].__dict__()
         elif len(args) == 1 and isinstance(args[0], dict):
             self.__query__ = self.__query__.where(args[0])
@@ -254,7 +265,13 @@ class Model:
     def delete(self):
         # 是否未加载就保存，那就先查询
         if self.__is_load() and len(self.__query__.get_map()) > 0:
-            self.__query__.delete()
+            if self.__soft_delete__ is not None:
+                if isinstance(self.__soft_delete__, Datetime):
+                    self.__query__.save({self.__soft_delete__.name: ColumnFunc.now()})     # 软删除
+                else:
+                    raise Exception("不支持的软删除字段")
+            else:
+                self.__query__.delete()     # 实际删除
 
 
     """

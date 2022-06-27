@@ -1,6 +1,5 @@
-import signal, logging
+import signal, logging, mimetypes
 import importlib, time, os, inspect
-import json, mimetypes
 from typing import Optional, Awaitable
 from concurrent.futures import ThreadPoolExecutor
 
@@ -9,7 +8,7 @@ import tornado
 from tornado import web
 from tornado.concurrent import run_on_executor
 from .exception import *
-from .contain.controller import Controller
+from .controller import Controller
 from .settings import SETTINGS
 
 logger = logging.getLogger(__name__)
@@ -266,28 +265,3 @@ class ProcessorController(web.RequestHandler):
 
     def on_finish(self):
         self._is_finish = True
-
-
-class Result(object):
-
-    def __init__(self, code=200, msg="SUCCESS", data=None):
-        self.code = code
-        self.msg = msg
-        self.data = data
-
-    def __str__(self):
-        ret = {'code': self.code, 'msg': self.msg, 'data': self.data}
-        return json.dumps(ret, indent=99)
-
-    @staticmethod
-    def success(data=None, msg="SUCCESS"):
-        return Result.result(200, msg, data)
-
-    @staticmethod
-    def error(msg="ERROR", code=500):
-        return Result.result(code, msg, None)
-
-    @staticmethod
-    def result(code, msg, data):
-        return Result(code, msg, data)
-

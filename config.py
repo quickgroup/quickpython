@@ -1,4 +1,4 @@
-import os, logging, urllib3, threading, datetime
+import os, logging, urllib3, sys, datetime
 from multiprocessing import cpu_count
 from logging.handlers import TimedRotatingFileHandler
 from quickpython.component.env import env
@@ -10,16 +10,16 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class Config:
 
-    APP = 'app'     # 应用目录
-    MODE = None     # 运行模式：web、cmd
-    DEBUG = True
-    ROOT_PATH = str(os.getcwd()).replace('\\', '/')
+    DEBUG = env.get("app.debug", False)
+    IS_WIN32 = sys.platform == "win32"
 
-    #
+    # 运行模式
+    MODE = None     # 运行模式：web、cmd
     MODE_WEB = "WEB"
     MODE_CMD = "CMD"
 
     # 目录
+    ROOT_PATH = str(os.getcwd()).replace('\\', '/')
     CACHE_PATH = ROOT_PATH + '/cache'       # cache目录
     DATA_PATH = ROOT_PATH + '/data'         # 数据目录
     LOGS_PATH = ROOT_PATH + '/cache/logs'   # 日志目录
@@ -36,10 +36,6 @@ class Config:
                 logger.info('创建目录：{}'.format(dir_it))
                 os.makedirs(dir_it)
 
-    @staticmethod
-    def is_debug():
-        return env.get("app.debug", False)
-
     @classmethod
     def logging_init(cls):
         """初始化日志模块"""
@@ -54,7 +50,7 @@ class Config:
         file_handler.setLevel(logging.DEBUG)
         # 全局
         formatter_str = '%(asctime)s %(levelname)s [%(filename)s:%(funcName)s:%(lineno)d]\t%(message)s'
-        level = logging.DEBUG if cls.is_debug() else logging.INFO
+        level = logging.DEBUG if cls.DEBUG else logging.INFO
         logging.basicConfig(format=formatter_str, level=level, handlers=[console_handler, file_handler])
 
     # env环境变量

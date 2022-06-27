@@ -117,6 +117,18 @@ class DemoModel:
             .select()
         logger.debug("user_7=\n{}".format(Utils.dict_to_str(user_7)))
 
+    def tran(self):
+        try:
+            QuerySet.start_trans()      # TODO::开启事务
+            """
+                执行数据操作
+            """
+            QuerySet.commit()       # TODO::提交事务
+
+        except BaseException as exc:
+            QuerySet.rollback()     # TODO::回滚事务
+            raise exc
+
 
 if __name__ == '__main__':
     try:
