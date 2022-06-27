@@ -4,6 +4,7 @@
 import logging
 from libs.utils import BaseClass
 from quickpython.server.processor import ProcessorController
+from quickpython.boot import Boot
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,10 @@ class Test(BaseClass):
     def test_102(self):
         """测试session读写功能"""
         from quickpython.component.session import Session
+
+    def boot(self):
+        """测试session读写功能"""
+        Boot.cmd()
 
 
 if __name__ == "__main__":
