@@ -5,17 +5,18 @@ import pymysql
 import time, threading, logging
 from .. import setttings
 from ..contain.func import *
+log = logging.getLogger(__name__)
+
+thr_id_dict = {}
 
 
 class Connection:
 
     _local = threading.local()
-    log = logging.getLogger(__name__)
 
     def __init__(self):
         self._is_trans_ing = False
-        self._conn = None           # type:pymysql.Connection
-        self._conn_cursor = None
+        self._conn = None
         self._conn_start_time = int(time.time())
         self.config = {
             'engine': "mysql",
@@ -32,7 +33,7 @@ class Connection:
         self.config = {**self.config, **setttings.DATABASES['default']}
         self.config['port'] = int(self.config['port']) if not_empty(self.config['port']) else 3306
         self.config['wait_timeout'] = int(self.config['wait_timeout'])
-        self.log.setLevel(logging.DEBUG if self.get_config('echo', True) else logging.INFO)
+        log.setLevel(logging.DEBUG if self.get_config('echo', True) else logging.INFO)
 
     def get_config(self, name, def_val=None):
         if name in self.config:
@@ -40,45 +41,52 @@ class Connection:
         return self.config['options'][name] if name in self.config['options'] else def_val
 
     @staticmethod
-    def get_connect():
-        if hasattr(Connection._local, '__db_connection'):
-            return Connection._local.__getattribute__('__db_connection')
+    def connect(re_connect=False):
+        """获取连接，已连接将返回"""
+        connect = local_get(Connection._local, '__db_connection')
+        if connect is not None and re_connect is False:
+            return connect
 
         connection = Connection()
-        connection.connect()
-        Connection._local.__setattr__('__db_connection', connection)
+        connection._connect()
+        local_set(Connection._local, '__db_connection', connection)
         return connection
 
-    def connect(self, re=False):
-        """连接 已连接将返回"""
-        if self._conn is None or re:
-            self.log.debug("connect={}".format({'hostname': self.config['hostname']}))
-            if self.config['engine'] == 'mysql':
-                self._conn = pymysql.connect(
-                    host=self.config['hostname'],
-                    port=self.config['port'],
-                    user=self.config['username'],
-                    password=self.config['password'],
-                    db=self.config['database'],
-                    charset=self.config['charset'])
-                self._conn.autocommit(True)
+    def _connect(self):
+        """创建新连接"""
+        local_set(Connection._local, '__db_connection', None)
+        if self.config['engine'] == 'mysql':
+            self._conn = pymysql.connect(
+                host=self.config['hostname'],
+                port=self.config['port'],
+                user=self.config['username'],
+                password=self.config['password'],
+                db=self.config['database'],
+                charset=self.config['charset'])
 
-            else:
-                raise Exception("不支持的数据库引擎：{}".format(self.config['engine']))
-            self._conn_start_time = int(time.time())
+            self._conn.autocommit(True)
 
+        else:
+            raise Exception("不支持的数据库引擎：{}".format(self.config['engine']))
+
+        self._conn_start_time = int(time.time())
         return self
 
-    def check_wait_timeout(self):
+    def get_cursor(self):
+        self._check_connection_timeout()
+        curr = local_get(Connection._local, '__db_connection_curr')
+        if curr is None:
+            curr = self._conn.cursor(pymysql.cursors.DictCursor)
+            local_set(Connection._local, '__db_connection_curr', curr)
+
+        return curr
+
+    def _check_connection_timeout(self):
         """检测超时，超时将重新连接（处于事务中时不会重连）"""
         if self._is_trans_ing:      # 事务中不检测
             return False
         curr_time = int(time.time())
         if curr_time - self._conn_start_time >= self.config['wait_timeout']:
-            self._conn_cursor.close()
-            self._conn_cursor = None
-            self._conn.close()
-            self._conn = None
             self.connect(True)
 
     def ping(self):
@@ -86,61 +94,49 @@ class Connection:
 
     def start_trans(self):
         """开启事务"""
-        self.check_wait_timeout()       # TODO::获取游标时检测超时
-        self.log.debug("start_trans")
+        self._check_connection_timeout()       # TODO::获取游标时检测超时
+        log.debug("start_trans")
         self._conn.autocommit(False)
 
     def commit(self):
         """提交事务"""
-        self.log.debug("commit")
+        log.debug("commit")
         self._conn.commit()
+        self._conn.autocommit(True)
 
     def rollback(self):
         """回滚事务"""
-        self.log.debug("rollback")
+        log.debug("rollback")
         self._conn.rollback()
         self._conn.autocommit(True)
 
-    def get_cursor(self):
-        self.check_wait_timeout()       # TODO::获取游标时检测超时
-        if self._conn_cursor is None:
-            self._conn_cursor = self._conn.cursor()
-        return self._conn_cursor
-
     def execute(self, sql):
-        self.log.debug(sql)
+        log.debug(sql)
         cur = self.get_cursor()
         count = cur.execute(sql)
         ret = cur.fetchone()
         return count, ret, cur.description
 
     def execute_all(self, sql):
-        self.log.debug(sql)
+        log.debug(sql)
         cur = self.get_cursor()
+        log.info("thd={}, conn={}, cursor={}, \nsql={}"
+                 .format(threading.current_thread().ident, self.connect()._conn, self.get_cursor(), sql))
         count = cur.execute(sql)
         ret = cur.fetchall()
         return count, ret, cur.description
 
     def execute_get_id(self, sql):
-        self.log.debug(sql)
+        log.debug(sql)
         cur = self.get_cursor()
         count = cur.execute(sql)
         ret = cur.fetchone()
         ret_id = self._conn.insert_id()
         return count, ret, ret_id
 
-    def execute_sql(self, sql):
-        """ 执行原生SQL，结果转为字典列表 """
-        count, ret, description = self.execute_all(sql)
-        if description is None:
-            return []
-        titles = [title[0] for title in description]
-        res = [dict(list(zip(titles, item))) for item in ret]
-        return res
-
     def execute_find(self, sql):
-        rows = self.execute_sql(sql)
-        return rows[0] if len(rows) > 0 else None
+        count, ret, _ = self.execute(sql)
+        return ret
 
     def close(self):
         self._conn.close()

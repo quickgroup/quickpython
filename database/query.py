@@ -77,7 +77,7 @@ class QuerySet(object):
 
     @staticmethod
     def connect():
-        return Connection.get_connect()
+        return Connection.connect()
 
     def __close(self):
         self.connect().close()
@@ -337,20 +337,8 @@ class QuerySet(object):
         if sql is None or len(sql) == 0:
             return None
 
-        # sql += " LIMIT 1"
-        # logger.debug("{} {}".format(id(self.__conn), sql))
         count, result, field_info = self.connect().execute_all(sql)
-        if result is None or len(result) == 0:
-            return None
-
-        # 根据返回字段进行数据封装
-        data = {}
-        row = result[0]
-        for idx in range(len(field_info)):
-            name = field_info[idx][0]
-            data[name] = row[idx]
-
-        return data
+        return None if empty(result) else result[0]
 
     def select(self):
         sql = self.__com_query_sql()
@@ -358,25 +346,13 @@ class QuerySet(object):
             return None
 
         count, result, field_info = self.connect().execute_all(sql)
-        ret = []
-
-        for index, item in enumerate(result):
-            data = {}
-            for idx in range(len(field_info)):
-                name = field_info[idx][0]
-                data[name] = item[idx]
-            ret.append(data)
-
-        return ret
+        return result
 
     def value(self, field):
         self.__fields = [field]
         sql = self.__com_query_sql()
         count, result, _ = self.connect().execute(sql)
-        if result is not None:
-            return result[0]
-        else:
-            return 0
+        return 0 if result is None else result[0]
 
     def count(self):
         return self.value('count(*)')
@@ -476,17 +452,17 @@ class QuerySet(object):
     @staticmethod
     def start_trans():
         """开启事务"""
-        Connection.get_connect().start_trans()
+        Connection.connect().start_trans()
 
     @staticmethod
     def commit():
         """提交事务"""
-        Connection.get_connect().commit()
+        Connection.connect().commit()
 
     @staticmethod
     def rollback():
         """回滚事务"""
-        Connection.get_connect().rollback()
+        Connection.connect().rollback()
 
     def __complement_table_name(self, name:str):
         pre_len = len(self.prefix)

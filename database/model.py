@@ -467,7 +467,6 @@ class RelationModel:
         self.local_key_val = getattr(self.parent, self.local_key)
         if self.local_key_val is None:
             logger.warning("父模型关联属性值为空 {}".format(self.local_key))
-            return None
 
         self.model = self.model_cls()
         self.model.__relation__ = self

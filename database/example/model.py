@@ -3,6 +3,7 @@ model demo
 """
 import logging
 from app.common.models import *
+from quickpython.database import *
 from libs.utils import Utils
 
 logger = logging.getLogger(__name__)
@@ -12,16 +13,15 @@ class DemoModel:
 
     def call(self):
         """"""
-        self.base()
-        # self.join()
-
-    def base(self):
         # self.save()
         # self.remove()
         # self.save_update()
         # self.get()
-        self.aggregation()
+        # self.aggregation()
         # self.field_use()
+        # join
+        # self.join()
+        self.tran2()
 
     def join(self):
         self.join_1()
@@ -30,11 +30,11 @@ class DemoModel:
     def save(self):
         """新增"""
         mtime = Utils.mtime()
-        UserModel(**{'username': "test1"}).save()
-        UserModel(**{'username': "test2"}).save()
-        UserModel(**{'username': "test3"}).save()
-        UserModel(**{'username': "test4"}).save()
-        UserModel(**{'username': "test5"}).save()
+        UserModel(**{'username': "test1", 'nickname': "test1"}).save()
+        UserModel(**{'username': "test2", 'nickname': "test2"}).save()
+        UserModel(**{'username': "test3", 'nickname': "test3"}).save()
+        UserModel(**{'username': "test4", 'nickname': "test4"}).save()
+        UserModel(**{'username': "test5", 'nickname': "test5"}).save()
         logger.info("新增耗时 {}ms".format(Utils.mtime() - mtime))
 
     def remove(self):
@@ -58,21 +58,21 @@ class DemoModel:
 
     def get(self):
         """查询"""
-        # user_4 = UserModel().where(UserModel.username == "lo106258").get()
-        # if user_4 is None: raise Exception("未找到nickname = test4 的数据")
-        # logger.info("user_4={}".format(user_4))
+        user_4 = UserModel().where(UserModel.id == "lo106258").get()
+        if user_4 is None: raise Exception("未找到nickname = test4 的数据")
+        logger.info("user_4={}".format(user_4))
         # 参数条件查询
         # user_5 = UserModel().where(username="lo106258").get()
         # if user_5 is None: raise Exception("未找到user_5数据")
         # logger.info("user_5={}".format(user_5))
 
         # 包含标签
-        user_5_2 = UserModel().where(id__in=["40830", "40831"]).select()
-        if user_5_2 is None: raise Exception("未找到 user_5_2 数据")
-        logger.info("user_5_2={}".format(user_5_2))
-        user_5_3 = UserModel().where(id__not_in=["40830", "40831"]).select()
-        if user_5_3 is None: raise Exception("未找到 user_5_3 数据")
-        logger.info("user_5_3={}".format(user_5_3))
+        # user_5_2 = UserModel().where(id__in=["40830", "40831"]).select()
+        # if user_5_2 is None: raise Exception("未找到 user_5_2 数据")
+        # logger.info("user_5_2={}".format(user_5_2))
+        # user_5_3 = UserModel().where(id__not_in=["40830", "40831"]).select()
+        # if user_5_3 is None: raise Exception("未找到 user_5_3 数据")
+        # logger.info("user_5_3={}".format(user_5_3))
 
         # 比较标签
         # for it in "eq,neq,gt,egt,lt,elt".split(','):
@@ -155,6 +155,17 @@ class DemoModel:
         except BaseException as exc:
             QuerySet.rollback()     # TODO::回滚事务
             raise exc
+
+    def tran2(self):
+        try:
+            with Transaction():
+                UserModel(**{'username': "test1", 'nickname': "test1"}).save()
+                logger.debug("保存用户完成")
+        except BaseException as exc:
+            raise exc
+
+        UserModel(**{'username': "test2", 'nickname': "test2"}).save()
+
 
 
 if __name__ == '__main__':

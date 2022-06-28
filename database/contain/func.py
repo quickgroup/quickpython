@@ -9,6 +9,8 @@ from inspect import isfunction
 def empty(obj):
     if obj is None:
         return True
+    elif hasattr(obj, '__len__') and len(obj) == 0:
+        return True
     elif isinstance(obj, int) and obj == 0:
         return True
     elif isinstance(obj, str) and len(obj) == 0:
@@ -30,3 +32,12 @@ def load_cls(cls_path, **kwargs):
     cls = getattr(module, cls_name)
     return cls
 
+
+def local_get(local, name, def_val=None):
+    if hasattr(local, name) and not_empty(local.__getattribute__(name)):
+        return local.__getattribute__(name)
+    return def_val
+
+
+def local_set(local, name, data):
+    local.__setattr__(name, data)

@@ -25,21 +25,21 @@ class GenerateDemo:
         # 获取全部表
         count, ret, field_info = conn.execute_all("SHOW TABLES")
         prefix = conn.get_config('prefix')
-        table_dict = {it[0]: {} for it in ret}
+        table_dict = {list(it.values())[0]: {} for it in ret}
         # 获取表的字段属性
         for table in table_dict:
             sql = "SHOW FULL COLUMNS FROM `{}`".format(table)
             ret2 = conn.execute_all(sql)[1]
             for it in ret2:
-                field_name = it[0]
-                type_ = str(it[1]).split("(")[0].lower()
+                field_name = it['Field']
+                type_ = str(it['Type']).split("(")[0].lower()
                 type_cls = field_map[type_] if type_ in field_map else field_map['varchar']
                 table_dict[table][field_name] = {
                     'name': field_name,
                     'type': type_,
                     'type_cls': type_cls,
-                    'primary_key': it[4] == "PRI",
-                    'comment': it[8],
+                    'primary_key': it['Key'] == "PRI",
+                    'comment': it['Comment'],
                 }
 
         ret = list()
