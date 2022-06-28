@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 class Model:
     """模型基类"""
     __table__ = None        # 模型对象数据表表名
-    __table_pk__ = None     # type:ColumnBase , 主键
+    __table_pk__ = None     # type:ColumnBase
     __table_args__ = None   # 表加参数
     __table_fields__ = None # 模型的字段列表
     __attrs__ = None        # 模型显示的属性
-    __soft_delete__ = None  # 模型显示的属性
+    __soft_delete__ = None  # type:ColumnBase
     __relation__ = None     # 被关联信息
     __parent__ = []         # 父模型
     __origin__ = {}         # 原始数据（数据查询
@@ -85,11 +85,11 @@ class Model:
     def where(self, *args, **kwargs):
         args = list(args)
         where = {'key': None, 'type': '=', 'val': None}
-        # 字典查询条件
+        # 字典查询条件: id__eq、id__in
         if len(kwargs) > 0:
             for it, val in kwargs.items():
                 if it.find('__') > -1:
-                    if val is None or len(val) == 0:
+                    if empty(val):
                         return self
                     it_arr = it.split('__')
                     self.__query__ = self.__query__.where({it_arr[0]: [it_arr[1], val]})
@@ -238,9 +238,16 @@ class Model:
         return 1
 
     def remove(self):
+        """模型删除方法"""
         if len(self.__query__.get_map()) == 0:
             pk, pk_val = self.__get_pk_val__()
             self.where(pk == pk_val)
+        # 软删除
+        if self.__soft_delete__ is not None:
+            if isinstance(self.__soft_delete__, Datetime):
+                return self.__query__.save({self.__soft_delete__.name: ColumnFunc.now()})  # 软删除
+            else:
+                raise Exception("不支持的软删除字段类型")
         return self.__query__.delete()
 
     def __get_pk_val__(self):
@@ -265,16 +272,11 @@ class Model:
             self.__query__.update(data)
 
     def delete(self):
-        # 是否未加载就保存，那就先查询
         if self.__is_load() and len(self.__query__.get_map()) > 0:
-            if self.__soft_delete__ is not None:
-                if isinstance(self.__soft_delete__, Datetime):
-                    self.__query__.save({self.__soft_delete__.name: ColumnFunc.now()})     # 软删除
-                else:
-                    raise Exception("不支持的软删除字段")
-            else:
-                self.__query__.delete()     # 实际删除
+           self.__query__.delete()     # 实际删除
 
+    def aggregation(self, *args):
+        return self.__query__.aggregation(*args)
 
     """
         属性控制
@@ -383,6 +385,8 @@ class Model:
         return data
 
     def to_dict(self):
+        if isinstance(self, list):
+            return [it.__dict__() for it in self]
         return self.__dict__()
 
     """

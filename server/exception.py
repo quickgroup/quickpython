@@ -8,6 +8,12 @@ class ResponseException(AppException):
     pass
 
 
+class ResponseFileException(AppException):
+    def __init__(self, file, mime=None):
+        self.file = file
+        self.mime = mime
+
+
 class ResponseRenderException(ResponseException):
 
     def __init__(self, tpl_name, data):

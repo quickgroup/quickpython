@@ -71,16 +71,16 @@ class QuerySet(object):
             'multi': {},
             'where': {},
         }
-        conn = self.get_connect()
+        conn = self.connect()
         self.prefix = conn.get_config("prefix", '')
         self.__database = conn.config['database']
 
     @staticmethod
-    def get_connect():
+    def connect():
         return Connection.get_connect()
 
     def __close(self):
-        self.get_connect().close()
+        self.connect().close()
 
     @property
     def __self(self):
@@ -205,19 +205,23 @@ class QuerySet(object):
         return self
 
     __op_map = {
-        'eq': '=',
-        'neq': '<>',
-        'lt': '<',
-        'elt': '<=',
-        'gt': '>',
-        'egt': '>=',
+        'EQ': '=',
+        'NEQ': '<>',
+        'LT': '<',
+        'LTE': '<=',
+        'GT': '>',
+        'GTE': '>=',
     }
 
     __op_in = {
-        'in': 'IN',
-        'not in': 'NOT IN',
-        'not_in': 'NOT IN',
-        'exists': 'EXISTS',
+        'IN': 'IN',
+        'NOT IN': 'NOT IN',
+        'NOT_IN': 'NOT IN',
+        'EXISTS': 'EXISTS',
+    }
+
+    __op_extend = {
+        'RANGE': 'RANGE',
     }
 
     def get_map(self):
@@ -235,8 +239,8 @@ class QuerySet(object):
                 # logger.debug("condition={}".format(condition))
                 conditions = condition if isinstance(condition[0], list) else [condition]
                 for cond in conditions:
-                    op = str(cond[0]).lower()
-                    if op == 'exp':
+                    op = str(cond[0]).upper()
+                    if op == 'EXP':
                         where_item = str(cond[1])      # 表达式查询，支持SQL语法
                     elif op in self.__op_map:
                         where_item = "{}{}{}".format(format_field(field), self.__op_map[op], format_val(cond[1]))
@@ -246,6 +250,10 @@ class QuerySet(object):
                             in_val = [format_val(it) for it in cond[1]]
                             in_val = ",".join(in_val)
                         where_item = "{}{}({})".format(format_field(field), self.__op_in[op], in_val)
+                    elif op in self.__op_extend:
+                        if op == 'RANGE':
+                            val = cond[1]
+                            where_item = "{} BETWEEN {} AND {}".format(format_field(field), format_val(val[0]), format_val(val[1]))
                     else:
                         where_item = "{}{}{}".format(format_field(field), cond[0], format_val(cond[1]))
 
@@ -328,7 +336,7 @@ class QuerySet(object):
 
         # sql += " LIMIT 1"
         # logger.debug("{} {}".format(id(self.__conn), sql))
-        count, result, field_info = self.get_connect().execute_all(sql)
+        count, result, field_info = self.connect().execute_all(sql)
         if result is None or len(result) == 0:
             return None
 
@@ -346,7 +354,7 @@ class QuerySet(object):
         if sql is None:
             return None
 
-        count, result, field_info = self.get_connect().execute_all(sql)
+        count, result, field_info = self.connect().execute_all(sql)
         ret = []
 
         for index, item in enumerate(result):
@@ -361,7 +369,7 @@ class QuerySet(object):
     def value(self, field):
         self.__fields = [field]
         sql = self.__com_query_sql()
-        count, result, _ = self.get_connect().execute(sql)
+        count, result, _ = self.connect().execute(sql)
         if result is not None:
             return result[0]
         else:
@@ -369,6 +377,14 @@ class QuerySet(object):
 
     def count(self):
         return self.value('count(*)')
+
+    def aggregation(self, *args):
+        if len(args) == 1 and isinstance(args[0], str):
+            self.__fields.extend(str(args[0]).split(','))
+        else:
+            self.__fields.extend(args)
+
+        return self.find()
 
     def insert(self, data):
         if isinstance(data, dict) is False:
@@ -383,7 +399,7 @@ class QuerySet(object):
             return 0
 
         sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
-        return self.get_connect().execute(sql)[0]
+        return self.connect().execute(sql)[0]
 
     def insert_get_id(self, data):
         if isinstance(data, dict) is False:
@@ -400,7 +416,7 @@ class QuerySet(object):
         sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
 
         # 执行
-        count, ret, pk = self.get_connect().execute_get_id(sql)
+        count, ret, pk = self.connect().execute_get_id(sql)
         # logger.debug("pk={}".format(pk))
         return pk
 
@@ -429,7 +445,7 @@ class QuerySet(object):
 
         # 表名、更新的字段、限制条件
         sql = "UPDATE {} SET {} {}".format(format_field(self.__table__), ", ".join(fields), where_str)
-        count, ret, _ = self.get_connect().execute(sql)
+        count, ret, _ = self.connect().execute(sql)
         return count
 
     def set_option(self, key, val):
@@ -441,7 +457,7 @@ class QuerySet(object):
             raise Exception("禁止不使用 where 删除数据")
 
         sql = "DELETE FROM {} {}".format(self.__table_name_sql__(), where_str)
-        count, result, _ = self.get_connect().execute(sql)
+        count, result, _ = self.connect().execute(sql)
         return count
 
     def set_inc(self, key, step=1):
@@ -451,7 +467,7 @@ class QuerySet(object):
         return self.update({key: key + '-' + str(step)})
 
     def query(self, sql):
-        count, ret, _ = self.get_connect().execute(sql)
+        count, ret, _ = self.connect().execute(sql)
         return ret
 
     @staticmethod
@@ -486,7 +502,7 @@ class QuerySet(object):
             count, list_data, field_info = cache_data
         else:
             sql = "SHOW FULL COLUMNS FROM `{}`".format(table)
-            count, list_data, field_info = self.get_connect().execute_all(sql)
+            count, list_data, field_info = self.connect().execute_all(sql)
             self.__set_cache(ck, (count, list_data, field_info))
 
         if full_name:

@@ -129,5 +129,18 @@ class Connection:
         ret_id = self._conn.insert_id()
         return count, ret, ret_id
 
+    def execute_sql(self, sql):
+        """ 执行原生SQL，结果转为字典列表 """
+        count, ret, description = self.execute_all(sql)
+        if description is None:
+            return []
+        titles = [title[0] for title in description]
+        res = [dict(list(zip(titles, item))) for item in ret]
+        return res
+
+    def execute_find(self, sql):
+        rows = self.execute_sql(sql)
+        return rows[0] if len(rows) > 0 else None
+
     def close(self):
         self._conn.close()

@@ -19,7 +19,8 @@ class DemoModel:
         # self.save()
         # self.remove()
         # self.save_update()
-        self.get()
+        # self.get()
+        self.aggregation()
         # self.field_use()
 
     def join(self):
@@ -85,6 +86,9 @@ class DemoModel:
         # user_rows = UserModel().where(UserModel.username == "test4").select()
         # logger.info("user_rows={}:{}".format(len(user_rows), user_rows))
         # logger.info("查找成功")
+
+    def aggregation(self):
+        ret = UserModel().where(id__in=["40830", "40831"]).aggregation("")
 
     def field_use(self):
         """字段使用和参与计算"""
