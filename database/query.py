@@ -556,15 +556,12 @@ class Transaction:
         self.query_set = QuerySet()
 
     def __enter__(self):
-        logger.debug("开启事务")
         self.query_set.start_trans()
 
     def __exit__(self, exc_type, value, traceback):
         if exc_type is None:
-            logger.debug("提交事务")
             self.query_set.commit()
             return True
         else:
-            logger.debug("回滚事务")
             self.query_set.rollback()
             return False

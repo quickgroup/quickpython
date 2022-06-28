@@ -154,6 +154,7 @@ class Model:
         return obj
 
     def all(self):
+        logger.warning("此方法为兼容而存在")
         return self.select()
 
     def select(self):

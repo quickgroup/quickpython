@@ -21,8 +21,8 @@ class DemoModel:
         # self.field_use()
         # join
         # self.join()
-        # self.tran2()
-        self.thread()
+        self.tran2()
+        # self.thread()
 
     def join(self):
         self.join_1()
@@ -158,14 +158,24 @@ class DemoModel:
             raise exc
 
     def tran2(self):
+        """测试事务"""
+        UserModel().where(id=49253).find().save({'password': 1111})
+        UserModel().where(username__in=['test111', 'test222']).delete()
         try:
             with Transaction():
-                UserModel(**{'username': "test1", 'nickname': "test1"}).save()
+                UserModel().where(id=49253).find().save({'password': Utils.stime()})
+
+                UserModel(**{'username': "test111", 'nickname': "test111"}).save()
                 logger.debug("保存用户完成")
+
+                Utils.sleep(10)
+                raise Exception("弹出异常")
+
+                UserModel(**{'username': "test222", 'nickname': "test222"}).save()
+                logger.debug("保存用户完成")
+
         except BaseException as exc:
             raise exc
-
-        UserModel(**{'username': "test2", 'nickname': "test2"}).save()
 
     def thread(self):
         """多线程下的数据读写"""
