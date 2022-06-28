@@ -1,7 +1,7 @@
 """
 model demo
 """
-import logging
+import logging, threading
 from app.common.models import *
 from quickpython.database import *
 from libs.utils import Utils
@@ -21,7 +21,8 @@ class DemoModel:
         # self.field_use()
         # join
         # self.join()
-        self.tran2()
+        # self.tran2()
+        self.thread()
 
     def join(self):
         self.join_1()
@@ -165,6 +166,47 @@ class DemoModel:
             raise exc
 
         UserModel(**{'username': "test2", 'nickname': "test2"}).save()
+
+    def thread(self):
+        """多线程下的数据读写"""
+        start_date = "20100101"
+        end_date = "20190101"
+        user = UserModel().where(id=49253).find()
+
+        try:
+            stockDailyModel = StockDailyModel()
+            def method_1():
+                # 不停的读取数据
+                while True:
+                    rows = stockDailyModel.where(date__range=[
+                        str(start_date).replace('-', ''),
+                        str(end_date).replace('-', '')
+                    ]).select()
+                    logger.debug("读取日线数据：{}".format(len(rows)))
+                    Utils.sleep(1)
+
+            def method_2():
+                while True:
+                    user.save({'password': Utils.mtime()})
+                    logger.debug("thr2 更新用户信息完成：{}".format(user))
+                    Utils.sleep(1)
+
+            def method_3():
+                while True:
+                    user.save({'password': Utils.mtime()})
+                    logger.debug("thr3 更新用户信息完成：{}".format(user))
+                    Utils.sleep(1)
+
+            threading.Thread(target=method_1).start()
+            threading.Thread(target=method_2).start()
+            threading.Thread(target=method_3).start()
+
+        except BaseException as e:
+            logger.exception("出现异常")
+            logger.exception(e)
+            user.save({'password': Utils.mtime()})
+
+        logger.exception("完成测试")
 
 
 

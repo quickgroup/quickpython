@@ -41,3 +41,8 @@ def local_get(local, name, def_val=None):
 
 def local_set(local, name, data):
     local.__setattr__(name, data)
+
+
+def get_thr_id():
+    import threading
+    return threading.current_thread().ident

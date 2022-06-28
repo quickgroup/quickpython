@@ -7,18 +7,21 @@ from .. import setttings
 from ..contain.func import *
 log = logging.getLogger(__name__)
 
-thr_id_dict = {}
-
 
 class Connection:
 
     _local = threading.local()
+    config = {}
 
     def __init__(self):
-        self._is_trans_ing = False
-        self._conn = None
-        self._conn_start_time = int(time.time())
-        self.config = {
+        self.load_config()
+        log.setLevel(logging.DEBUG if self.get_config('echo', True) else logging.INFO)
+
+    @classmethod
+    def load_config(cls):
+        if not_empty(cls.config):
+            return
+        cls.config = {
             'engine': "mysql",
             'hostname': "127.0.0.1",
             'port': 3306,
@@ -30,113 +33,136 @@ class Connection:
             'prefix': "",       # 表前缀
             'options': {},
         }
-        self.config = {**self.config, **setttings.DATABASES['default']}
-        self.config['port'] = int(self.config['port']) if not_empty(self.config['port']) else 3306
-        self.config['wait_timeout'] = int(self.config['wait_timeout'])
-        log.setLevel(logging.DEBUG if self.get_config('echo', True) else logging.INFO)
+        cls.config = {**cls.config, **setttings.DATABASES['default']}
+        cls.config['port'] = int(cls.config['port']) if not_empty(cls.config['port']) else 3306
+        cls.config['wait_timeout'] = int(cls.config['wait_timeout'])
+        log.setLevel(logging.DEBUG if cls.config.get('echo', True) else logging.INFO)
 
-    def get_config(self, name, def_val=None):
-        if name in self.config:
-            return self.config[name]
-        return self.config['options'][name] if name in self.config['options'] else def_val
+    @staticmethod
+    def get_config(name, def_val=None):
+        cls = Connection
+        cls.load_config()
+        if name in cls.config:
+            return cls.config[name]
+        if name in cls.config['options']:
+            return cls.config['options'][name]
+        return def_val
 
     @staticmethod
     def connect(re_connect=False):
-        """获取连接，已连接将返回"""
-        connect = local_get(Connection._local, '__db_connection')
-        if connect is not None and re_connect is False:
-            return connect
+        """获取连接，已连接直接返回"""
+        connect = local_get(Connection._local, '__db_pm_connection')
+        if connect is None or re_connect:
+            local_set(Connection._local, '__db_pm_connection', Connection._connect())
 
-        connection = Connection()
-        connection._connect()
-        local_set(Connection._local, '__db_connection', connection)
-        return connection
+        return Connection       # 返回本类，实现方法直接调用
 
-    def _connect(self):
+    @classmethod
+    def __conn__(cls):
+        cls.connect()
+        return local_get(Connection._local, '__db_pm_connection')  # 真实的pymysql连接
+
+    @classmethod
+    def _connect(cls):
         """创建新连接"""
-        local_set(Connection._local, '__db_connection', None)
-        if self.config['engine'] == 'mysql':
-            self._conn = pymysql.connect(
-                host=self.config['hostname'],
-                port=self.config['port'],
-                user=self.config['username'],
-                password=self.config['password'],
-                db=self.config['database'],
-                charset=self.config['charset'])
+        local_set(Connection._local, '__db_pm_connection', None)
+        local_set(Connection._local, '__db_pm_connection_curr', None)
+        if cls.get_config('engine') == 'mysql':
+            conn = pymysql.connect(
+                host=cls.get_config('hostname'),
+                port=cls.get_config('port'),
+                user=cls.get_config('username'),
+                password=cls.get_config('password'),
+                db=cls.get_config('database'),
+                charset=cls.get_config('charset'))
 
-            self._conn.autocommit(True)
+            conn.autocommit(True)
+            conn.__thr_id = get_thr_id()
+            conn.__in_transaction = False   # 非事务中
+            conn.__conn_start_time = int(time.time())   # 连接时间
+            return conn
 
         else:
-            raise Exception("不支持的数据库引擎：{}".format(self.config['engine']))
+            raise Exception("不支持的数据库引擎：{}".format(cls.get_config('engine')))
 
-        self._conn_start_time = int(time.time())
-        return self
-
-    def get_cursor(self):
-        self._check_connection_timeout()
-        curr = local_get(Connection._local, '__db_connection_curr')
+    @classmethod
+    def get_cursor(cls):
+        cls._check_connection_timeout()
+        curr = local_get(Connection._local, '__db_pm_connection_curr')
         if curr is None:
-            curr = self._conn.cursor(pymysql.cursors.DictCursor)
-            local_set(Connection._local, '__db_connection_curr', curr)
+            curr = cls.__conn__().cursor(pymysql.cursors.DictCursor)
+            local_set(Connection._local, '__db_pm_connection_curr', curr)
 
         return curr
 
-    def _check_connection_timeout(self):
+    @classmethod
+    def _check_connection_timeout(cls):
         """检测超时，超时将重新连接（处于事务中时不会重连）"""
-        if self._is_trans_ing:      # 事务中不检测
+        conn = cls.__conn__()
+        if conn.autocommit_mode:       # 事务中跳过
             return False
         curr_time = int(time.time())
-        if curr_time - self._conn_start_time >= self.config['wait_timeout']:
-            self.connect(True)
+        if curr_time - conn.__conn_start_time >= cls.get_config('wait_timeout'):
+            cls.connect(True)
 
     def ping(self):
         """数据库PING"""
 
-    def start_trans(self):
+    @classmethod
+    def start_trans(cls):
         """开启事务"""
-        self._check_connection_timeout()       # TODO::获取游标时检测超时
         log.debug("start_trans")
-        self._conn.autocommit(False)
+        cls._check_connection_timeout()       # TODO::获取游标时检测超时
+        cls.__conn__().autocommit(False)
 
-    def commit(self):
+    @classmethod
+    def commit(cls):
         """提交事务"""
         log.debug("commit")
-        self._conn.commit()
-        self._conn.autocommit(True)
+        conn = cls.__conn__()
+        conn.commit()
+        conn.autocommit(True)
 
-    def rollback(self):
+    @classmethod
+    def rollback(cls):
         """回滚事务"""
         log.debug("rollback")
-        self._conn.rollback()
-        self._conn.autocommit(True)
+        conn = cls.__conn__()
+        conn.rollback()
+        conn.autocommit(True)
 
-    def execute(self, sql):
+    @classmethod
+    def execute(cls, sql):
         log.debug(sql)
-        cur = self.get_cursor()
+        conn = cls.__conn__()
+        cur = cls.get_cursor()
         count = cur.execute(sql)
         ret = cur.fetchone()
         return count, ret, cur.description
 
-    def execute_all(self, sql):
+    @classmethod
+    def execute_all(cls, sql):
         log.debug(sql)
-        cur = self.get_cursor()
-        log.info("thd={}, conn={}, cursor={}, \nsql={}"
-                 .format(threading.current_thread().ident, self.connect()._conn, self.get_cursor(), sql))
+        conn = cls.__conn__()
+        cur = cls.get_cursor()
         count = cur.execute(sql)
         ret = cur.fetchall()
         return count, ret, cur.description
 
-    def execute_get_id(self, sql):
+    @classmethod
+    def execute_get_id(cls, sql):
         log.debug(sql)
-        cur = self.get_cursor()
+        conn = cls.__conn__()
+        cur = cls.get_cursor()
         count = cur.execute(sql)
         ret = cur.fetchone()
-        ret_id = self._conn.insert_id()
+        ret_id = conn.insert_id()
         return count, ret, ret_id
 
-    def execute_find(self, sql):
-        count, ret, _ = self.execute(sql)
-        return ret
+    @classmethod
+    def execute_find(cls, sql):
+        return cls.execute(sql)[1]
 
-    def close(self):
-        self._conn.close()
+    @classmethod
+    def close(cls):
+        cls.__conn__().close()

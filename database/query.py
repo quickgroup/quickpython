@@ -71,9 +71,9 @@ class QuerySet(object):
             'multi': {},
             'where': {},
         }
-        conn = self.connect()
-        self.prefix = conn.get_config("prefix", '')
-        self.__database = conn.config['database']
+        self.connection = self.connect()
+        self.prefix = self.connection.get_config("prefix", '')
+        self.__database = self.connection.get_config('database')
 
     @staticmethod
     def connect():
