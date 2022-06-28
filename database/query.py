@@ -96,8 +96,10 @@ class QuerySet(object):
         return self
 
     def __table_name_sql__(self):
-        table_name = '' if empty(self.prefix) else self.__table
-        table_name = "{}{}".format(format_field(self.__table__), format_field(table_name))
+        """sql中的表名，识别并增加别名"""
+        if empty(self.prefix):
+            return format_field(self.__table__)
+        table_name = "{}{}".format(format_field(self.__table__), format_field(self.__table))
         return table_name
 
     def where(self, field, op=None, condition=None):
@@ -281,10 +283,10 @@ class QuerySet(object):
         fields = ','.join(self.__fields)
         sa.append("{}".format(fields if len(fields) > 0 else '*'))
         sa.append("FROM {}".format(self.__table_name_sql__()))
-        if self.__alias != '':
+        if not_empty(self.__alias):
             sa.append(self.__alias)
 
-        if len(self.__join) > 0:
+        if not_empty(self.__join):
             for item in self.__join:
                 table, alias = item['table'], ''
                 if isinstance(table, dict):
@@ -293,7 +295,8 @@ class QuerySet(object):
                 table = self.__complement_table_name(table)
                 sa.append("{} JOIN {} {} ON {}".format(item['type_'], table, alias, item['on']))
 
-        sa.append(self.__com_where_sql())
+        if not_empty(self.__map):
+            sa.append(self.__com_where_sql())
 
         if 'group' in self.__options:
             sa.append("GROUP BY {}".format(self.__options['group']))

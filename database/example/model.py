@@ -88,7 +88,10 @@ class DemoModel:
         # logger.info("查找成功")
 
     def aggregation(self):
-        ret = UserModel().where(id__in=["40830", "40831"]).aggregation("")
+        ret = UserModel().where(id__in=["40830", "40831"]).aggregation("SUM(id) sum_id")
+        logger.info("ret={}".format(ret))
+        ret = UserModel().group("branch_id").aggregation("COUNT(id) count_id")
+        logger.info("ret2={}".format(ret))
 
     def field_use(self):
         """字段使用和参与计算"""
