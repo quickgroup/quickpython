@@ -30,11 +30,15 @@ class Config:
     @classmethod
     def init(cls, mode):
         cls.MODE = str(mode).upper()
+        cls.dirs_init()
         cls.logging_init()
-        for dir_it in cls.DIRS:
-            if os.path.exists(dir_it) is False:
-                logger.info('创建目录：{}'.format(dir_it))
-                os.makedirs(dir_it)
+
+    @classmethod
+    def dirs_init(cls):
+        for it in cls.DIRS:
+            if os.path.exists(it) is False:
+                logger.info('创建目录：{}'.format(it))
+                os.makedirs(it)
 
     @classmethod
     def logging_init(cls):
