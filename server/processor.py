@@ -85,7 +85,6 @@ class ProcessorController(web.RequestHandler):
 
         except ResponseException as e:
             return e
-
         except BaseException as e:
             logging.exception(e)
             return "请求异常：{}".format(e)
@@ -229,7 +228,7 @@ class ProcessorController(web.RequestHandler):
             status_code = 404
             ret = ret.text
         elif isinstance(ret, ResponseFileException):
-            return self.return_file(ret.file)
+            return self.return_file(ret.file, ret.mime)
         elif isinstance(ret, ResponseTextException):
             ret = ret.text
         elif isinstance(ret, AppException):
@@ -252,26 +251,36 @@ class ProcessorController(web.RequestHandler):
 
         return False
 
-    def return_file(self, path):
+    def return_file(self, path, mime=None):
         """
         如果是文件且存在就处理
         PS: http://127.0.0.1:8107/static/assets/img/logo.png
         """
         public_path = SETTINGS.get('public_path', "")
-        max_age = SETTINGS.get('resource_max_age', 86400)
+        res_max_age = SETTINGS.get('resource_max_age', 86400)
 
         # 文件输出
-        if self._write_file(path, 0):
+        if self._write_file(path, 0, mime):
             return True
         # 静态资源
-        if self._write_file(public_path + path, max_age):
+        if self._write_file(public_path + path, res_max_age, mime):
             return True
         return False
 
-    def _write_file(self, file_path, max_age=86400):
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            mime = mimetypes.guess_type(file_path)
-            self.set_header('content-type', "application/octet-stream" if mime[0] is None else mime[0])
+    def _write_file(self, file_path, max_age=86400, mime=None):
+        # 直接输出二进制内容
+        if isinstance(file_path, bytes):
+            self.set_header('content-type', "application/octet-stream" if mime is None else mime)
+            self.write(file_path)
+            return True
+
+        # 字符串作为文件路径
+        if isinstance(file_path, str) and os.path.exists(file_path) and os.path.isfile(file_path):
+            if mime is not None:
+                mime = mime
+            else:
+                mime = mimetypes.guess_type(file_path)[0]
+            self.set_header('content-type', "application/octet-stream" if mime is None else mime)
             self.set_header('cache-control', "max-age={}".format(max_age))
             # 开启此选项浏览器回直接下载文件
             # self.set_header('Content-Disposition', 'attachment; filename=' + os.path.basename(file_path))

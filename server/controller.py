@@ -1,7 +1,9 @@
 import logging
+from libs.utils import Utils
 from quickpython.server.exception import *
 from quickpython.component.session import Session
 from quickpython.component.result import Result
+from quickpython.server.settings import SETTINGS
 from .request import Request
 
 
@@ -13,7 +15,15 @@ class Controller:
         self.log = logging.getLogger(self.__class__.__name__)
         self.pro_obj = None         # type:web.processor.ProcessorController
         self.params = {}            # 请求数据
-        self.assign_data = {}       # 默认注入参数
+        self.assign_data = {        # 默认注入参数
+            'version': self._version,
+            'Utils': Utils,
+        }
+
+    @property
+    def _version(self):
+        # return Utils.stime() if SETTINGS['debug'] else SETTINGS['version']
+        return SETTINGS['version']
 
     def initialize(self):
         pass
@@ -30,7 +40,7 @@ class Controller:
         self.request = Request(request)
         self.headers = request.headers
         self.cookies = request.cookies
-        self.session = Session(self)
+        self.session = request.session = Session(self)
         self.initialize()
 
     def render(self, *args, **kwargs):

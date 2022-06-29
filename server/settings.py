@@ -6,6 +6,7 @@ from quickpython.config import Config, env
 SETTINGS = {
     'debug': env.get('app.debug', False),
     'port': env.get('app.port', False),
+    'version': '0.2.1',
     'template_path': 'app',
     'public_path': 'public',
     'static_path': 'public/static',

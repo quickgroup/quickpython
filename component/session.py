@@ -38,26 +38,30 @@ class Session:
         return sha1(bytes('%s%s' % (time.time(), os.urandom(32)), encoding='utf-8')).hexdigest()
 
     def __getitem__(self, item):
-        return self._CACHE[self.sess_id].get(item)
+        return self.get(item)
 
     def __setitem__(self, key, value):
-        self._CACHE[self.sess_id][key] = value
+        return self.set(key, value)
 
     def __delitem__(self, key):
-        if key in self._CACHE[self.sess_id]:
-            del self._CACHE[self.sess_id][key]
+        return self.delete(key)
 
     def get(self, key, def_val=None):
-        if self.sess_id in self._CACHE:
-            return self._CACHE[self.sess_id].get(key, def_val)
-        return def_val
+        if self.sess_id not in self._CACHE:
+            return def_val
+        return self._CACHE[self.sess_id].get(key, def_val)
 
     def set(self, key, val):
         if self.sess_id not in self._CACHE:
             self._CACHE[self.sess_id] = {}
         self._CACHE[self.sess_id][key] = val
 
-    def delete(self):
+    def delete(self, key):
+        if self.sess_id not in self._CACHE:
+            return
+        del self._CACHE[self.sess_id][key]
+
+    def destroy(self):
         """从大字典删除session_id"""
         del self._CACHE[self.sess_id]
 

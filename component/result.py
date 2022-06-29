@@ -1,4 +1,5 @@
 import json
+import datetime, decimal
 
 
 class Result:
@@ -10,7 +11,7 @@ class Result:
 
     def __str__(self):
         ret = {'code': self.code, 'msg': self.msg, 'data': self.data}
-        return json.dumps(ret, indent=99)
+        return json.dumps(ret, cls=self.JsonCustomEncoder)
 
     @staticmethod
     def success(data=None, msg="SUCCESS"):
@@ -23,3 +24,14 @@ class Result:
     @staticmethod
     def result(code, msg, data):
         return Result(code, msg, data)
+
+    class JsonCustomEncoder(json.JSONEncoder):
+        def default(self, field):
+            if isinstance(field, datetime.datetime):
+                return field.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(field, datetime.date):
+                return field.strftime('%Y-%m-%d')
+            elif isinstance(field, decimal.Decimal):
+                return field.to_eng_string()
+            else:
+                return json.JSONEncoder.default(self, field)

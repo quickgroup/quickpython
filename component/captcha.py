@@ -1,19 +1,24 @@
-"""
-    python-quick-captcha 1.0
-"""
 import logging, random, os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 
-class Captcha:
+class Captcha(object):
 
-    # @staticmethod
-    # def out(request):
-    #     from django.shortcuts import HttpResponse
-    #     event = request.GET.get("event", 'default')
-    #     image_data, code = Captcha.generate()
-    #     request.session['_captcha_' + event] = code
-    #     return HttpResponse(image_data, content_type="image/png")
+    @staticmethod
+    def out_django(request):
+        from django.shortcuts import HttpResponse
+        event = request.GET.get("event", 'default')
+        image_data, code = Captcha.generate()
+        request.session['_captcha_' + event] = code
+        return HttpResponse(image_data, content_type="image/png")
+
+    @staticmethod
+    def out_toranado(request):
+        from quickpython.server.exception import ResponseFileException
+        event = str(request.arguments.get("event", 'default')[0])
+        image_data, code = Captcha.generate()
+        request.session['_captcha_' + event] = code
+        return ResponseFileException(image_data, "image/png")
 
     @staticmethod
     def verify(request, text=None, event='default'):
@@ -35,7 +40,7 @@ class Captcha:
 
         # 生成验证码
         def gene_code(size, font_count, font_color, line_color):
-            font_path = '{}/font.ttf'.format(os.path.dirname(os.path.abspath(__file__)))
+            font_path = '{}/captcha_font.ttf'.format(os.path.dirname(os.path.abspath(__file__)))
             # 宽和高
             width, height = size
             # 创建图片, 'RGBA'表示4*8位像素，真彩+透明通道
@@ -57,7 +62,7 @@ class Captcha:
             for i in range(line_count):
                 gene_line(draw, width, height, line_color)
             # 滤镜，边界加强，ImageFilter.EDGE_ENHANCE_MORE为深度边缘增强滤波，会使得图像中边缘部分更加明显。
-            image = image.filter(ImageFilter.EDGE_ENHANCE_MORE)
+            # image = image.where(ImageFilter.EDGE_ENHANCE_MORE)
             # 保存验证码图片
             # image.save('idencode.png')
 
