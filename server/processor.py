@@ -3,13 +3,17 @@ import importlib, time, os, inspect
 from typing import Optional, Awaitable
 from concurrent.futures import ThreadPoolExecutor
 
-import config
 import tornado
 from tornado import web
 from tornado.concurrent import run_on_executor
+
+import config
+import quickpython
 from .exception import *
 from .controller import Controller
 from .settings import SETTINGS
+from quickpython.component.function import *
+from quickpython.component.result import Result
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -40,33 +44,9 @@ class ProcessorController(web.RequestHandler):
         if resp_content is True:
             # self.finish()
             return
-        if self.response_write(resp_content) is False:
+        if self.response_write(resp_content) is False:  # =False是未处理
             self.finish()
             return
-
-    def return_file(self, path):
-        """
-        如果是文件且存在就处理
-        PS: http://127.0.0.1:8107/static/assets/img/logo.png
-        """
-        file_path = "{}{}".format(SETTINGS['static_path'], path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            mime = mimetypes.guess_type(file_path)
-            self.set_header('Content-Type', mime[0])
-            self.set_header('cache-control', "max-age={}".format(SETTINGS.get('resource_max_age', 86400)))
-            # 开启此选项浏览器回直接下载文件
-            # self.set_header('Content-Disposition', 'attachment; filename=' + os.path.basename(file_path))
-            buf_size = 1024 * 1024 * 10
-            with open(file_path, 'rb') as f:
-                while True:
-                    data = f.read(buf_size)
-                    if not data:
-                        break
-                    self.write(data)
-
-            return True
-
-        return False
 
     @run_on_executor
     def _dispose(self, *args):
@@ -214,11 +194,13 @@ class ProcessorController(web.RequestHandler):
         logger.debug("path_arr={} -> pa={}".format(path_arr, pa))
 
         cls.load_module()
+        url_html = SETTINGS['url_html']
 
         module, controller, action = pa[0], '.'.join(pa[1:-1]), pa[-1]
         module, controller, action = module.lower(), controller.lower(), action.lower()
         if module in cls.MODULES:
             if controller in cls.MODULES[module]:
+                action = action.replace(url_html, '')
                 if action in cls.MODULES[module][controller]['m']:
                     obj = cls.MODULES[module][controller]['obj']
                     obj = obj.__class__()
@@ -235,17 +217,20 @@ class ProcessorController(web.RequestHandler):
         """返回结果统一处理"""
         # headers
         self.set_status(status_code)
-        self.set_header('Server', 'quickpython-1.05')
+        self.set_header('Server', quickpython.name + '-' + quickpython.version)
         self.set_header('Accept-Language', 'zh-CN,zh;q=0.9')
-        self.set_header('Content-Type', 'text/html; charset={}'.format(SETTINGS['encoding']))
 
         if isinstance(ret, ResponseRenderException):
             return self.render(template_name=ret.tpl_name, **ret.data)
-        if isinstance(ret, ResponseNotFoundException):
+        elif isinstance(ret, ResponseNotFoundException):
             status_code = 404
             ret = ret.text
-        if isinstance(ret, ResponseTextException):
+        elif isinstance(ret, ResponseFileException):
+            return self.return_file(ret.file)
+        elif isinstance(ret, ResponseTextException):
             ret = ret.text
+        elif isinstance(ret, AppException):
+            ret = str(ret)
 
         self.set_status(status_code)
         # 返回json
@@ -258,7 +243,45 @@ class ProcessorController(web.RequestHandler):
 
         # 返回html
         if self._is_finish is False:
+            self.set_header('Content-Type', 'text/html; charset={}'.format(SETTINGS['encoding']))
             self.write(str(ret))
+            return True
+
+        return False
+
+    def return_file(self, path):
+        """
+        如果是文件且存在就处理
+        PS: http://127.0.0.1:8107/static/assets/img/logo.png
+        """
+        # 文件输出
+        if self._write_file(path):
+            return True
+
+        # 静态资源
+        public_path = "{}{}".format(SETTINGS['public_path'], path)
+        if self._write_file(public_path):
+            return True
+
+        return False
+
+    def _write_file(self, file_path):
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            mime = mimetypes.guess_type(file_path)
+            # logger.info("file_path={}".format(file_path))
+            # logger.info("mime={}".format(mime))
+            self.set_header('content-type', "application/octet-stream" if mime[0] is None else mime[0])
+            self.set_header('cache-control', "max-age={}".format(SETTINGS.get('resource_max_age', 86400)))
+            # 开启此选项浏览器回直接下载文件
+            # self.set_header('Content-Disposition', 'attachment; filename=' + os.path.basename(file_path))
+            buf_size = 1024 * 1024 * 10
+            with open(file_path, 'rb') as f:
+                while True:
+                    data = f.read(buf_size)
+                    if not data:
+                        break
+                    self.write(data)
+
             return True
 
         return False

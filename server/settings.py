@@ -7,7 +7,8 @@ SETTINGS = {
     'debug': env.get('app.debug', False),
     'port': env.get('app.port', False),
     'template_path': 'app',
-    'static_path': 'public',
+    'public_path': 'public',
+    'static_path': 'public/static',
     'ui_methods': functions,
     'pro_thr_num': None,        # 默认是CPU核心数的线程数量
     # 环境配置
@@ -20,6 +21,7 @@ SETTINGS = {
     'default_action': 'index',
     'url_convert': True,    # 自动转换为控制器方法
     'url_route_on': False,
+    'url_html': '.html',
     # 模板配置
     'template': {
         'view_path': '',
