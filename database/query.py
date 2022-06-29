@@ -352,7 +352,7 @@ class QuerySet(object):
         self.__fields = [field]
         sql = self.__com_query_sql()
         count, result, _ = self.connect().execute(sql)
-        return 0 if result is None else result[0]
+        return 0 if result is None else result[field]
 
     def count(self):
         return self.value('count(*)')

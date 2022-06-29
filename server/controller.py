@@ -62,3 +62,15 @@ class Controller:
         if len(args) == 0:
             args = "{}.{}".format(self.action, self.tpl_ext),
         return self.render(*args, **kwargs)
+
+    @staticmethod
+    def result(code, msg, data):
+        return Result.result(code, msg, data)
+
+    @staticmethod
+    def success(data=None, msg="SUCCESS"):
+        return Result.success(data, msg)
+
+    @staticmethod
+    def error(msg="ERROR", code=500):
+        return Result.error(msg, code)
