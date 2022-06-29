@@ -1,6 +1,8 @@
 import logging
-from quickpython.component.session import Session
 from quickpython.server.exception import *
+from quickpython.component.session import Session
+from quickpython.component.result import Result
+from .request import Request
 
 
 class Controller:
@@ -25,6 +27,7 @@ class Controller:
     def __initialize_request__(self, path, params, request):
         self.path = path
         self.params = params
+        self.request = Request(request)
         self.headers = request.headers
         self.cookies = request.cookies
         self.session = Session(self)
@@ -35,7 +38,7 @@ class Controller:
         if args[0].find(self.tpl_ext) > -1:     # type:str
             args[0] = "{}/{}".format(self.controller, args[0])
         else:
-            args[0] = "{}/{}.{}".format(self.controller, args[0], self.tpl_ext)
+            args[0] = "{}/{}.{}".format(self.controller, args[0], self.tpl_ext)     # 追加模板后缀
         args[0] = "{}/view/{}/{}".format(self.module, self.tpl_style, args[0])
         # return self.pro_obj.render(template_name=args[0], __config="", **{**self._assign_data, **kwargs})
 
@@ -45,6 +48,7 @@ class Controller:
     def __getattr__(self, name):
         return getattr(self.pro_obj, name)
 
-    def view(self, **kwargs):
-        view_path = "{}.{}".format(self.action, self.tpl_ext)
-        return self.render(view_path, **kwargs)
+    def view(self, *args, **kwargs):
+        if len(args) == 0:
+            args = "{}.{}".format(self.action, self.tpl_ext),
+        return self.render(*args, **kwargs)

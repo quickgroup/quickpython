@@ -4,8 +4,10 @@
 
 import logging, copy
 from .query import QuerySet
-from .contain.columns import *
 from .contain.func import *
+from .contain.columns import *
+from .contain.relation import *
+from .contain.pagination import Pagination
 
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ class Model:
     __origin__ = {}         # 原始数据（数据查询
     __data__ = {}           # 设置的数据
     __withs__ = []          # 预加载属性
-    __query__ = QuerySet()
+    __query__ = QuerySet()  # type:QuerySet
 
     def __init__(self, *args, **kwargs):
         self._is_new = False  # 是否是新增
@@ -40,8 +42,7 @@ class Model:
                 cls_attr = object.__getattribute__(self.__class__, key)
                 setattr(self, key, copy.copy(cls_attr))
         # 查询器
-        # self.__query = QuerySet().table(self.__table__)   # 基础查询构造器
-        self.__query__ = QuerySet().table(self.__table__)
+        self.__query__ = QuerySet().table(self.__table__)   # type:QuerySet
 
     def _load_field(self):
         self.__class__._get_cls_fields()
@@ -353,19 +354,6 @@ class Model:
 
         return attr
 
-    def __relation_load_data(self):
-        __relation__ = object.__getattribute__(self, '__relation__')
-        if __relation__ is not None and __relation__.is_load_data is False:
-            if isinstance(__relation__, OneToOne):     # 只懒加载一对一
-                data = __relation__.__load_data__()
-                if isinstance(data, self.__class__):
-                    for key in self.__attrs__:
-                        self.__setattr__(key, getattr(data, key), True)
-                    self.__modified_fields__ = []       # 可能由于顺序问题
-                    # setattr(__relation__.parent, __relation__.name, self)       # 保持本对象
-                elif isinstance(data, list):
-                    setattr(__relation__.parent, __relation__.name, data)
-
     def __str__(self):
         pk, pk_val = self.__get_pk_val__()
         return "{} object({})=>{}".format(self.__class__.__name__, pk_val, self.__dict__())
@@ -377,7 +365,7 @@ class Model:
         data = {}
         withs_name = [it.name for it in self.__withs__]
         for k, c in self.__attrs__.items():
-            if len(withs_name) > 0 and isinstance(c, RelationModel):
+            if len(withs_name) > 0 and isinstance(c, RelationModel):    # 预加载处理
                 if k in withs_name:
                     data[k] = getattr(self, k)
             else:
@@ -391,26 +379,24 @@ class Model:
         return self.__dict__()
 
     """
-        模型预加载
+    预加载方法
     """
-
     def withs(self, models):
-        """预加载关联模型数据"""
+        """标记预加载"""
         if empty(models):
             return self
 
         if isinstance(models, str):
             models = models.split(',')
 
-        withs = models if isinstance(models, list) else models
-        for it in withs:
+        for it in models:
             if isinstance(it, OneToOne):    # 只支持一对一的预载入
                 self.__withs__.append(it)
 
         return self
 
     def eagerly_result(self, result, withs):
-        """预载入关联查询 装载数据"""
+        """装载数据"""
         self.__withs__ = withs
         # 关联数据载入
         for it in self.__withs__:
@@ -418,142 +404,35 @@ class Model:
             item.load_model_cls(self)
             item.withs_result(result)
 
+    def __relation_load_data(self):
+        """关联模型加载数据"""
+        __relation__ = object.__getattribute__(self, '__relation__')
+        if __relation__ is not None and __relation__.is_load_data is False:
+            if isinstance(__relation__, OneToOne):     # 只懒加载一对一
+                data = __relation__.__load_data__()
+                if isinstance(data, self.__class__):
+                    for key in self.__attrs__:
+                        self.__setattr__(key, getattr(data, key), True)
+                    self.__modified_fields__ = []       # 可能由于顺序问题
+                    # setattr(__relation__.parent, __relation__.name, self)       # 保持本对象
+                elif isinstance(data, list):
+                    setattr(__relation__.parent, __relation__.name, data)
 
-"""
-    模型关联
-"""
-
-
-class RelationModel:
-    type_ = None
-
-    def __init__(self, *args, **kwargs):
-        self.relation_name = args[0]    # type:quickpython.database.model   # 关联模型名称，该模型应该和对应模型在同一目录，否则应该写全路径，支出表名查找模型
-        self.relation_key = kwargs.pop('relation_key', None)    # 关联模型字段
-        self.local_key = kwargs.pop('local_key', None)          # 当前模型字段
-        self.eagerly_type = kwargs.pop('eagerly_type', 0)       # 预载入方式 0 -JOIN 1 -IN
-        self.model = None
-        self.model_cls = None
-        self.is_load_data = False
-        self.name = None        # 父模型关联字段名称、本类对应的属性名称
-        self.parent = None    # 父模型对象
-        self.local_key_val = None    # 父模型关联字段名称、本类对应的属性名称
-        # 基础查询器
-        self.__query = None     # QuerySet().table()
-
-    def load_model_cls(self, parent):
-        """获取对应模型并进行查询-到调用此方法说明是单独调用的"""
-        if self.model is not None:
-            return self.model
-        # 父模型的关联字段
-        if self.local_key is None:
-            self.local_key = "{}_id".format(self.name)
-
-        self.parent = parent
-        if hasattr(parent, self.local_key) is False:
-            raise Exception("未找到父模型的关联字段 {}".format(self.local_key))
-
-        # 获取关联模型类
-        cls_path = "{}.{}".format(parent.__class__.__module__, self.relation_name)
-        self.model_cls = load_cls(cls_path)
-        if self.model_cls.__table_pk__ is None:
-            self.model_cls()
-
-        if self.relation_key is None:
-            self.relation_key = self.model_cls.__table_pk__.name
-
-        return self.model
-
-    def bind_parent_where(self):
-        self.local_key_val = getattr(self.parent, self.local_key)
-        if self.local_key_val is None:
-            logger.warning("父模型关联属性值为空 {}".format(self.local_key))
-
-        self.model = self.model_cls()
-        self.model.__relation__ = self
-        self.model.where(self.relation_key, '=', self.local_key_val)
-
-    def __load_data__(self):
-        if self.is_load_data:
-            return self.model
-
-        self.is_load_data = True
-        self.bind_parent_where()
-
-        if isinstance(self, OneToOne):
-            self.model = self.model.find()
-            # logger.debug('self.model.__modified_fields__={}'.format(self.model.__modified_fields__))
-
-        elif isinstance(self, OneToMany):
-            self.model = self.model.select()
-
-        return self.model
-
-    def __str__(self):
-        return str(self.__dict__)
-
-    def __repr__(self):
-        return str(self.__dict__)
-
-    def eagerly(self, query):
-        """预载入关联查询（JOIN方式）"""
-        relation = self.name
-        # 处理父查询本字段，排除掉
-        # 再父查询追加本模型的预载入查询
-        join_table = self.model_cls.__table__
-        join_alias = relation
-        local_table = self.parent.__table__
-        # field
-        query.field(True, False, join_table, join_alias, relation + "__")
-        # join
-        join_on = "{}.{}={}.{}".format(local_table, self.local_key, join_alias, self.relation_key)
-        query.join({join_table: join_alias}, join_on, 'LEFT')
-
-    def withs_result_set(self, result_set):
-        """预载入关联查询（数据集、多个）"""
-        relation = self.name
-        if self.eagerly_type == 0:
-            for idx, result in result_set:
-                self.match(relation, result)
-
-    def withs_result(self, result):
-        """预载入关联查询（数据、单个）"""
-        relation = self.name
-        if self.eagerly_type == 0:
-            self.match(relation, result)
-
-    def match(self, relation, result):
-        """一对一 关联模型预查询拼装"""
-        data = {relation: {}}
-        for key, val in result.items():  # type:str, dict
-            if key.find("__") > -1:
-                name, attr = key.split("__")
-                if name == relation:
-                    data[name][attr] = val
-
-        if not_empty(data[relation]):
-            relation_model = self.model_cls(**data[relation])
-            relation_model.__modified_fields__ = []
-            relation_model.parent = self.parent     # 假设
-        else:
-            relation_model = None
-
-        self.bind_parent_where()
-        self.is_load_data = True
-        self.model = relation_model
-        self.parent.__setattr__(self.name, self.model, True)
-        # logger.debug("数据装载完成：{}:{}".format(id(self.model), self.model))
-        # parent_relation = getattr(self.parent, self.name)
-        # logger.debug("数据装载完成-父属性值：{}:{}".format(id(parent_relation), parent_relation))
+    """
+    扩展方法
+    """
+    def paginate(self, page=None, page_size=None, params=None, select_related=True):
+        """分页整理查询"""
+        page = 1 if page is None else page
+        page_size = 1 if page_size is None else page_size
+        page_size = page_size if 0 < page_size < 1000 else 20
+        # 关联的属性
+        if select_related:
+            related_attrs = [it for it in self.__attrs__ if isinstance(it, RelationModel)]
+            self.withs(related_attrs)
+        # 查询
+        total = self.__query__.count()
+        rows = self.__query__.page(page, page_size).select()
+        return Pagination(rows, page, page_size, total, params)
 
 
-class OneToOne(RelationModel):
-    type_ = "OneToOne"
-
-
-class OneToMany(RelationModel):
-    type_ = "OneToMany"
-
-
-class HasManyThrough(RelationModel):
-    type_ = "HasManyThrough"

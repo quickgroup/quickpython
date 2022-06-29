@@ -24,9 +24,10 @@ class ResponseRenderException(ResponseException):
 
 class ResponseTextException(ResponseException):
 
-    def __init__(self, text):
+    def __init__(self, text, status_code=200):
         Exception.__init__(self, ResponseTextException.__name__)
         self.text = text
+        self.status_code = status_code
 
 
 class ResponseNotFoundException(ResponseTextException):

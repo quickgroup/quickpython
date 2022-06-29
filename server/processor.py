@@ -214,6 +214,9 @@ class ProcessorController(web.RequestHandler):
             raise ResponseNotFoundException("模块不存在：{}".format(module))
 
     def response_write(self, ret, status_code=200):
+        return self._response_write(ret, status_code)
+
+    def _response_write(self, ret, status_code=200):
         """返回结果统一处理"""
         # headers
         self.set_status(status_code)
@@ -254,24 +257,22 @@ class ProcessorController(web.RequestHandler):
         如果是文件且存在就处理
         PS: http://127.0.0.1:8107/static/assets/img/logo.png
         """
+        public_path = SETTINGS.get('public_path', "")
+        max_age = SETTINGS.get('resource_max_age', 86400)
+
         # 文件输出
-        if self._write_file(path):
+        if self._write_file(path, 0):
             return True
-
         # 静态资源
-        public_path = "{}{}".format(SETTINGS['public_path'], path)
-        if self._write_file(public_path):
+        if self._write_file(public_path + path, max_age):
             return True
-
         return False
 
-    def _write_file(self, file_path):
+    def _write_file(self, file_path, max_age=86400):
         if os.path.exists(file_path) and os.path.isfile(file_path):
             mime = mimetypes.guess_type(file_path)
-            # logger.info("file_path={}".format(file_path))
-            # logger.info("mime={}".format(mime))
             self.set_header('content-type', "application/octet-stream" if mime[0] is None else mime[0])
-            self.set_header('cache-control', "max-age={}".format(SETTINGS.get('resource_max_age', 86400)))
+            self.set_header('cache-control', "max-age={}".format(max_age))
             # 开启此选项浏览器回直接下载文件
             # self.set_header('Content-Disposition', 'attachment; filename=' + os.path.basename(file_path))
             buf_size = 1024 * 1024 * 10
