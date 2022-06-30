@@ -17,6 +17,7 @@ from quickpython.component.result import Result
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+encoding = SETTINGS['encoding']
 
 
 class ProcessorController(web.RequestHandler):
@@ -65,7 +66,7 @@ class ProcessorController(web.RequestHandler):
             # 是否是ajax请求
             self.request.is_ajax = True if request.headers.get('x-requested-with') == 'XMLHttpRequest' else False
             # 是否是资源文件下载
-            if self.return_file(path):
+            if Handler.return_file(self, path):
                 return True
             # 收集请求参数
             params = self.params = Handler.parse_params(self)
@@ -223,74 +224,39 @@ class ProcessorController(web.RequestHandler):
         elif isinstance(ret, ResponseNotFoundException):
             status_code = 404
             ret = ret.text
+
         elif isinstance(ret, ResponseFileException):
-            return self.return_file(ret.file, ret.mime)
+            return Handler.return_file(ret.file, ret.mime)
+
         elif isinstance(ret, ResponseTextException):
+            status_code = ret.status_code
             ret = ret.text
+
+        elif isinstance(ret, ResponseException):
+            status_code = ret.status_code
+            ret = str(ret)
+
         elif isinstance(ret, AppException):
+            status_code = 500
             ret = str(ret)
 
         self.set_status(status_code)
         # 返回json
         request_type = self.request.headers.get("Content-Type", '').lower()
         if request_type == 'application/json' or self.request.is_ajax:
-            self.set_header('Content-Type', 'application/json')
-            ret = ret if isinstance(ret, Result) else Result.success(ret)
+            self.set_header('Content-Type', 'application/json; charset={}'.format(encoding))
+            ret = ret if isinstance(ret, Result) else Result.result(status_code, ret, None)
             self.write(str(ret))
             return True
 
         # 返回html
         if self._is_finish is False:
-            self.set_header('Content-Type', 'text/html; charset={}'.format(SETTINGS['encoding']))
+            self.set_header('Content-Type', 'text/html; charset={}'.format(encoding))
             self.write(str(ret))
             return True
 
         return False
 
-    def return_file(self, path, mime=None):
-        """
-        如果是文件且存在就处理
-        PS: http://127.0.0.1:8107/static/assets/img/logo.png
-        """
-        public_path = SETTINGS.get('public_path', "")
-        res_max_age = SETTINGS.get('resource_max_age', 86400)
-
-        # 文件输出
-        if self._write_file(path, 0, mime):
-            return True
-        # 静态资源
-        if self._write_file(public_path + path, res_max_age, mime):
-            return True
-        return False
-
-    def _write_file(self, file_path, max_age=86400, mime=None):
-        # 直接输出二进制内容
-        if isinstance(file_path, bytes):
-            self.set_header('content-type', "application/octet-stream" if mime is None else mime)
-            self.write(file_path)
-            return True
-
-        # 字符串作为文件路径
-        if isinstance(file_path, str) and os.path.exists(file_path) and os.path.isfile(file_path):
-            if mime is not None:
-                mime = mime
-            else:
-                mime = mimetypes.guess_type(file_path)[0]
-            self.set_header('content-type', "application/octet-stream" if mime is None else mime)
-            self.set_header('cache-control', "max-age={}".format(max_age))
-            # 开启此选项浏览器回直接下载文件
-            # self.set_header('Content-Disposition', 'attachment; filename=' + os.path.basename(file_path))
-            buf_size = 1024 * 1024 * 10
-            with open(file_path, 'rb') as f:
-                while True:
-                    data = f.read(buf_size)
-                    if not data:
-                        break
-                    self.write(data)
-
-            return True
-
-        return False
 
     def on_finish(self):
         self._is_finish = True

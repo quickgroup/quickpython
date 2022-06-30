@@ -5,7 +5,10 @@ class AppException(Exception):
 
 
 class ResponseException(AppException):
-    pass
+    def __init__(self, text, status_code=200):
+        super().__init__(text)
+        self.text = text
+        self.status_code = status_code
 
 
 class ResponseFileException(AppException):
@@ -14,20 +17,23 @@ class ResponseFileException(AppException):
         self.mime = mime
 
 
-class ResponseRenderException(ResponseException):
+class RedirectException(ResponseException):
+    def __init__(self, url, status_code=302):
+        super().__init__(url, status_code)
+        self.url = url
 
-    def __init__(self, tpl_name, data):
-        Exception.__init__(self, tpl_name)
+
+class ResponseRenderException(ResponseException):
+    def __init__(self, tpl_name, data, status_code=200):
+        super().__init__(tpl_name, status_code)
         self.tpl_name = tpl_name
         self.data = data
 
 
 class ResponseTextException(ResponseException):
-
     def __init__(self, text, status_code=200):
-        Exception.__init__(self, ResponseTextException.__name__)
+        super().__init__(text, status_code)
         self.text = text
-        self.status_code = status_code
 
 
 class ResponseNotFoundException(ResponseTextException):

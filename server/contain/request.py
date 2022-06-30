@@ -1,6 +1,8 @@
 
+from tornado import httputil
 
-class Request:
+
+class Request:      # type: httputil.HTTPServerRequest
 
     def __init__(self, target):
         self.target = target
