@@ -37,7 +37,7 @@ class Controller:
     def __initialize_request__(self, path, params, request):
         self.path = path
         self.params = params
-        self.request = Request(request)
+        self.request = request
         self.headers = request.headers
         self.cookies = request.cookies
         self.session = request.session = Session(self)

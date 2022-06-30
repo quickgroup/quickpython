@@ -25,13 +25,13 @@ class Session:
     }
 
     def __init__(self, handler, session_name=None):
-        self.handler = handler
+        handler = handler
         self.name = self.name if session_name is None else session_name
-        self.sess_id = self.handler.get_cookie(self.name)
+        self.sess_id = handler.get_cookie(self.name)
         if self.sess_id is None:
             self.sess_id = self._gen_session_id()
             self._CACHE[self.sess_id] = {}
-            self.handler.set_cookie(self.name, self.sess_id, max_age=self.expire)
+            handler.set_cookie(self.name, self.sess_id, max_age=self.expire)
 
     @classmethod
     def _gen_session_id(cls):

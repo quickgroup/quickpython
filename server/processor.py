@@ -10,7 +10,7 @@ from tornado.concurrent import run_on_executor
 import config
 import quickpython
 from .exception import *
-from .controller import Controller
+from .contain import Controller, Request, Handler
 from .settings import SETTINGS
 from quickpython.component.function import *
 from quickpython.component.result import Result
@@ -55,7 +55,7 @@ class ProcessorController(web.RequestHandler):
             self._on_mtime = int(time.time() * 1000)
             self._is_finish = False
             # 请求信息
-            request = self.request
+            request = self.request = Request(self.request)
             request.method = 'POST' if hasattr(self, 'method') is None else request.method
             logger.debug("method={}, args={}".format(request.method, args))
             remote_ip = request.remote_ip
@@ -68,11 +68,8 @@ class ProcessorController(web.RequestHandler):
             if self.return_file(path):
                 return True
             # 收集请求参数
-            params = self.params = {}
-            for key in request.arguments:
-                self.params[key] = self.get_argument(key)
+            params = self.params = Handler.parse_params(self)
             logger.debug("path={}, params={}".format(path, params))
-
             # 寻找控制器
             controller, controller_action = self.load_controller_action(self, path, path_arr)
             controller.__initialize_request__(path, params, request)
@@ -88,7 +85,6 @@ class ProcessorController(web.RequestHandler):
         except BaseException as e:
             logging.exception(e)
             return "请求异常：{}".format(e)
-
         finally:
             logging.info("{} {} {}ms".format(self.get_status(), self.request.path, int(time.time() * 1000) - self._on_mtime))
 

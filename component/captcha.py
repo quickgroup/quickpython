@@ -3,29 +3,29 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 
 class Captcha(object):
+    VAL_NAME = "_captcha_"
 
     @staticmethod
     def out_django(request):
         from django.shortcuts import HttpResponse
         event = request.GET.get("event", 'default')
         image_data, code = Captcha.generate()
-        request.session['_captcha_' + event] = code
+        request.session[Captcha.VAL_NAME + event] = code
         return HttpResponse(image_data, content_type="image/png")
 
     @staticmethod
-    def out_toranado(request):
+    def out_toranado(request, event='default'):
         from quickpython.server.exception import ResponseFileException
-        event = str(request.arguments.get("event", 'default')[0])
         image_data, code = Captcha.generate()
         request.session['_captcha_' + event] = code
         return ResponseFileException(image_data, "image/png")
 
     @staticmethod
     def verify(request, text=None, event='default'):
-        true_val = request.session.get('_captcha_' + event)
+        true_val = request.session.get(Captcha.VAL_NAME + event)
         if text is None or event is None or true_val is None:
             return False
-        request.session['_captcha_' + event] = None       # 每次验证后都要求刷新验证码
+        request.session[Captcha.VAL_NAME + event] = None       # 每次验证后都要求刷新验证码
         return str(text).lower() == str(true_val).lower()
 
     @staticmethod
