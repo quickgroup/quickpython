@@ -11,7 +11,7 @@ class ResponseException(AppException):
         self.msg = msg
         self.url = url
         self.data = data
-        self.wait = 0 if wait is None or wait <= 0 else wait
+        self.wait = 3 if wait is None else wait
 
     def __str__(self):
         return str(self.msg)
@@ -41,4 +41,5 @@ class ResponseTextException(ResponseException):
 
 
 class ResponseNotFoundException(ResponseTextException):
-    pass
+    def __init__(self, text):
+        super().__init__(text, code=404)

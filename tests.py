@@ -2,6 +2,8 @@
     测试
 """
 import logging
+import time
+
 from libs.utils import BaseClass
 from quickpython.server.processor import ProcessorController
 from quickpython.boot import Boot
@@ -9,10 +11,12 @@ from quickpython.boot import Boot
 logger = logging.getLogger(__name__)
 
 
-class Test(BaseClass):
+class Tests(BaseClass):
 
-    def call(self, *args):
-        self.test_102()
+    def call(self, argv):
+        if hasattr(self, argv[0]) is False:
+            raise Exception("方法不存在：{}".format(argv[0]))
+        getattr(self, argv[0], argv)()
 
     def test_100(self):
         """测试控制器加载"""
@@ -36,11 +40,22 @@ class Test(BaseClass):
 
     def test_102(self):
         """测试session读写功能"""
-        from quickpython.component.session import Session
+        from quickpython.component import Session
 
     def boot(self):
         """测试session读写功能"""
         Boot.cmd()
+
+    def cache(self):
+        """测试cache"""
+        from quickpython.component import cache
+        mtime = time.time()
+
+        cache.set('mtime', mtime, 3)
+        logger.info("写入cache完成")
+
+        data = cache.get('mtime')
+        logger.info("读取cache={}".format(data))
 
 
 if __name__ == "__main__":

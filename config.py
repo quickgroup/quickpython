@@ -1,4 +1,5 @@
 import os, logging, urllib3, sys, datetime
+import threading
 from multiprocessing import cpu_count
 from logging.handlers import TimedRotatingFileHandler
 from quickpython.component.env import env
@@ -33,7 +34,16 @@ class Config:
     MODE_CMD = "CMD"
 
     # 目录
+    ROOT_PATH = ROOT_PATH
+    CACHE_PATH = CACHE_PATH
+    LOGS_PATH = LOGS_PATH
+    DATA_PATH = DATA_PATH
+    PUBLIC_PATH = PUBLIC_PATH
+    UPLOADS_PATH = UPLOADS_PATH
     DIRS = [CACHE_PATH, LOGS_PATH, DATA_PATH, UPLOADS_PATH]
+
+    # 线程数据
+    _local = threading.local()
 
     @classmethod
     def init(cls, mode):
@@ -66,9 +76,8 @@ class Config:
         level = logging.DEBUG if cls.DEBUG else logging.INFO
         logging.basicConfig(format=formatter_str, level=level, handlers=[console_handler, file_handler])
 
-    # env环境变量
     @staticmethod
-    def env_get(key, default=None):
+    def get(key, default=None):
         val = env.get(key)
         if val == "true":
             val = True
@@ -108,3 +117,12 @@ class Config:
         # thr_num = 4 if cls.is_debug() else thr_num
         return 4
 
+    @classmethod
+    def local_set(cls, name, val):
+        cls._local.__setattr__(name, val)
+
+    @classmethod
+    def local_get(cls, name, def_val=None):
+        if hasattr(cls._local, name):
+            return cls._local.__getattribute__(name)
+        return def_val

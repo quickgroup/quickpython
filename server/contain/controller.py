@@ -15,7 +15,7 @@ class Controller:
         self.log = logging.getLogger(self.__class__.__name__)
         self.pro_obj = None         # type:web.processor.ProcessorController
         self.params = {}            # 请求数据
-        self.assign_data = {        # 默认注入参数
+        self.__assign_data = {        # 默认注入参数
             'version': self._version,
             'Utils': Utils,
         }
@@ -43,6 +43,13 @@ class Controller:
         self.session = request.session = Session(self)
         self.initialize()
 
+    def assign(self, **kwargs):
+        """添加数据"""
+        self.__assign_data = {
+            **self.__assign_data,
+            **kwargs
+        }
+
     def render(self, *args, **kwargs):
         args = list(args)
         if args[0].find(self.tpl_ext) > -1:     # type:str
@@ -50,13 +57,10 @@ class Controller:
         else:
             args[0] = "{}/{}.{}".format(self.controller, args[0], self.tpl_ext)     # 追加模板后缀
         args[0] = "{}/view/{}/{}".format(self.module, self.tpl_style, args[0])
-        # return self.pro_obj.render(template_name=args[0], __config="", **{**self._assign_data, **kwargs})
+        # return self.pro_obj.render(template_name=args[0], __config="", **{**self.__assign_data, **kwargs})
 
-        raise ResponseRenderException(args[0], {**{**self.assign_data, **kwargs}})
-        # return args[0], {**{**self._assign_data, **kwargs}}
-
-    def __getattr__(self, name):
-        return getattr(self.pro_obj, name)
+        raise ResponseRenderException(args[0], {**{**self.__assign_data, **kwargs}})
+        # return args[0], {**{**self.__assign_data, **kwargs}}
 
     def view(self, *args, **kwargs):
         if len(args) == 0:
@@ -74,3 +78,6 @@ class Controller:
     @staticmethod
     def error(msg="ERROR", code=500):
         return Result.error(msg, code)
+
+    def __getattr__(self, name):
+        return getattr(self.pro_obj, name)

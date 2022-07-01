@@ -221,9 +221,6 @@ class ProcessorController(web.RequestHandler):
         # 分别处理
         if isinstance(ret, ResponseRenderException):
             return self.render(template_name=ret.tpl_name, **ret.data)
-        elif isinstance(ret, ResponseNotFoundException):
-            status_code = 404
-            ret = ret.text
         elif isinstance(ret, ResponseFileException):
             return Handler.return_file(self, ret.file, ret.mime)
         elif isinstance(ret, ResponseException):

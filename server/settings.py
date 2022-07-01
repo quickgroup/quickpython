@@ -70,3 +70,7 @@ from .processor import ProcessorController
 ROUTES = [
     (r"/(.*)", ProcessorController),    # 默认处理控制器
 ]
+
+# TODO::将配置加载到env
+for it, val in SESSIONS.items():
+    env.set(it, val)

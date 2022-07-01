@@ -117,7 +117,9 @@ class Model:
         return self
 
     def get(self, *args, **kwargs):
-        if len(args) > 0 or len(kwargs) > 0:
+        if len(args) == 1 and len(kwargs) == 0 and args[0] is not None:
+            self.where(**{self.__table_pk__.name: args[0]})
+        elif len(kwargs) > 0:
             self.where(*args, **kwargs)
         return self.find()
 
@@ -364,14 +366,21 @@ class Model:
     def __dict__(self):
         data = {}
         withs_name = [it.name for it in self.__withs__]
-        for k, c in self.__attrs__.items():
-            if len(withs_name) > 0 and isinstance(c, RelationModel):    # 预加载处理
+        for k, c in self.__attrs__.items():     # 只输出指定字段
+            if len(withs_name) > 0 and isinstance(c, RelationModel):  # 关联对象数据
                 if k in withs_name:
                     data[k] = getattr(self, k)
             else:
                 data[k] = getattr(self, k)
 
         return data
+
+    def __getstate__(self):
+        return self.__dict__()
+
+    def __setstate__(self, state):
+        self.__init__()
+        self.__load_data(state)
 
     def to_dict(self):
         if isinstance(self, list):
