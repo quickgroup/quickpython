@@ -10,7 +10,7 @@ class Core:
 
     @classmethod
     def signal_init(cls):
-        """监听退出"""
+        """监听退出，不能再bind之前调用"""
 
         def signin_exit(signum, frame):
             # cls.log.info("进程停止")
@@ -30,12 +30,12 @@ class Core:
     @classmethod
     def init(cls, mode):
         Config.init(mode)
-        cls.signal_init()
         logging.getLogger("tornado.access").setLevel(logging.ERROR)
 
     @classmethod
     def cmd(cls):
         cls.init(Config.MODE_CMD)
+        cls.signal_init()
         cls.log.info("##########   Command mode   ##########")
 
     @classmethod
@@ -55,6 +55,7 @@ class Core:
             server.bind(SETTINGS['port'])
             server.start(0)     # 当参数小于等于０时，则根据当前机器的cpu核数来创建子进程，大于１时直接根据指定参数创建子进程
 
+        cls.signal_init()
         cls.log.info("WEB start complete, port={}".format(SETTINGS['port']))
         tornado.ioloop.IOLoop.instance().start()
         # 关闭
