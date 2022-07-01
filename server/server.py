@@ -53,7 +53,7 @@ class Core:
             server.listen(SETTINGS['port'])
         else:
             server.bind(SETTINGS['port'])
-            server.start(Config.web_pro_count(SETTINGS['pro_thr_num']))
+            server.start(0)     # 当参数小于等于０时，则根据当前机器的cpu核数来创建子进程，大于１时直接根据指定参数创建子进程
 
         cls.log.info("WEB start complete, port={}".format(SETTINGS['port']))
         tornado.ioloop.IOLoop.instance().start()
