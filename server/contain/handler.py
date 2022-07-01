@@ -3,10 +3,16 @@ import mimetypes
 
 from tornado import web
 
+from quickpython.config import Config, env
+
 from .request import Request
+from ..exception import *
 from ..settings import SETTINGS
 
 logger = logging.getLogger(__name__)
+
+dispatch_jump_html = env.get("ROOT_PATH") + "/quickpython/view/jump.html"
+exception_html = env.get("ROOT_PATH") + "/quickpython/view/exception.html"
 
 
 class Handler:
@@ -41,6 +47,12 @@ class Handler:
     @staticmethod
     def render_exception_result(e):
         return
+
+    @classmethod
+    def return_response(cls, hdl: web.RequestHandler, e: ResponseException):
+        if e.code == 200 or True:
+            hdl.render(dispatch_jump_html, **e.__dict__())
+        return True
 
     @classmethod
     def return_file(cls, hdl: web.RequestHandler, path, mime=None):

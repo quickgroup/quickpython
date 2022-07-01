@@ -5,10 +5,20 @@ class AppException(Exception):
 
 
 class ResponseException(AppException):
-    def __init__(self, text, status_code=200):
-        super().__init__(text)
-        self.text = text
-        self.status_code = status_code
+    def __init__(self, msg, url=None, data=None, wait=None, code=302):
+        super().__init__(msg)
+        self.code = code
+        self.msg = msg
+        self.url = url
+        self.data = data
+        self.wait = 0 if wait is None or wait <= 0 else wait
+
+    def __str__(self):
+        return str(self.msg)
+
+    def __dict__(self):
+        return {'code': self.code, 'msg': self.msg,
+                'url': self.url, 'data': self.data, 'wait': self.wait}
 
 
 class ResponseFileException(AppException):
@@ -17,22 +27,16 @@ class ResponseFileException(AppException):
         self.mime = mime
 
 
-class RedirectException(ResponseException):
-    def __init__(self, url, status_code=302):
-        super().__init__(url, status_code)
-        self.url = url
-
-
 class ResponseRenderException(ResponseException):
-    def __init__(self, tpl_name, data, status_code=200):
-        super().__init__(tpl_name, status_code)
+    def __init__(self, tpl_name, data, code=200):
+        super().__init__(tpl_name, code)
         self.tpl_name = tpl_name
         self.data = data
 
 
 class ResponseTextException(ResponseException):
-    def __init__(self, text, status_code=200):
-        super().__init__(text, status_code)
+    def __init__(self, text, code=200):
+        super().__init__(text, code=code)
         self.text = text
 
 

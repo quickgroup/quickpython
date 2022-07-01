@@ -7,6 +7,20 @@ logger = logging.getLogger(__name__)
 # 屏蔽ssl警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+ROOT_PATH = str(os.getcwd()).replace('\\', '/')
+CACHE_PATH = ROOT_PATH + '/cache'       # cache目录
+LOGS_PATH = ROOT_PATH + '/cache/logs'   # 日志目录
+DATA_PATH = ROOT_PATH + '/data'         # 数据目录
+PUBLIC_PATH = ROOT_PATH + '/public'     # 资源目录
+UPLOADS_PATH = ROOT_PATH + '/public/uploads'    # 上传目录
+
+env.set('ROOT_PATH', ROOT_PATH)
+env.set('CACHE_PATH', CACHE_PATH)
+env.set('LOGS_PATH', LOGS_PATH)
+env.set('DATA_PATH', DATA_PATH)
+env.set('PUBLIC_PATH', PUBLIC_PATH)
+env.set('UPLOADS_PATH', UPLOADS_PATH)
+
 
 class Config:
 
@@ -19,12 +33,6 @@ class Config:
     MODE_CMD = "CMD"
 
     # 目录
-    ROOT_PATH = str(os.getcwd()).replace('\\', '/')
-    CACHE_PATH = ROOT_PATH + '/cache'       # cache目录
-    DATA_PATH = ROOT_PATH + '/data'         # 数据目录
-    LOGS_PATH = ROOT_PATH + '/cache/logs'   # 日志目录
-    PUBLIC_PATH = ROOT_PATH + '/public'     # 资源目录
-    UPLOADS_PATH = ROOT_PATH + '/public/uploads'    # 上传目录
     DIRS = [CACHE_PATH, LOGS_PATH, DATA_PATH, UPLOADS_PATH]
 
     @classmethod
@@ -50,7 +58,7 @@ class Config:
         console_handler = logging.StreamHandler()
         # 文件
         encoding = env.get("encoding", "UTF-8")
-        file_path = '{}/{}'.format(cls.LOGS_PATH, cls.get_log_file_name())
+        file_path = '{}/{}'.format(LOGS_PATH, cls.get_log_file_name())
         file_handler = TimedRotatingFileHandler(file_path, when='D', backupCount=33, encoding=encoding)
         file_handler.setLevel(logging.DEBUG)
         # 全局

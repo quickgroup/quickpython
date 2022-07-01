@@ -218,24 +218,16 @@ class ProcessorController(web.RequestHandler):
         self.set_status(status_code)
         self.set_header('Server', quickpython.name + '-' + quickpython.version)
         self.set_header('Accept-Language', 'zh-CN,zh;q=0.9')
-
+        # 分别处理
         if isinstance(ret, ResponseRenderException):
             return self.render(template_name=ret.tpl_name, **ret.data)
         elif isinstance(ret, ResponseNotFoundException):
             status_code = 404
             ret = ret.text
-
         elif isinstance(ret, ResponseFileException):
-            return Handler.return_file(ret.file, ret.mime)
-
-        elif isinstance(ret, ResponseTextException):
-            status_code = ret.status_code
-            ret = ret.text
-
+            return Handler.return_file(self, ret.file, ret.mime)
         elif isinstance(ret, ResponseException):
-            status_code = ret.status_code
-            ret = str(ret)
-
+            return Handler.return_response(self, ret)
         elif isinstance(ret, AppException):
             status_code = 500
             ret = str(ret)
