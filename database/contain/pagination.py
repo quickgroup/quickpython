@@ -46,7 +46,7 @@ class Pagination:
 
     def __dict__(self):
         return {
-            'rows': dict(self.rows),
+            'rows': [dict(it) for it in self.rows],
             'page': self.page, 'page_size': self.page_size,
             'total': self.total, 'page_total': self.page_total,
         }

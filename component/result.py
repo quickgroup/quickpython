@@ -33,5 +33,7 @@ class Result:
                 return field.strftime('%Y-%m-%d')
             elif isinstance(field, decimal.Decimal):
                 return field.to_eng_string()
+            elif hasattr(field, '__dict__'):
+                return field.__dict__()
             else:
                 return json.JSONEncoder.default(self, field)

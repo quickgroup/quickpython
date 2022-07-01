@@ -432,8 +432,8 @@ class Model:
     """
     def paginate(self, page=None, page_size=None, params=None, select_related=True):
         """分页整理查询"""
-        page = 1 if page is None else page
-        page_size = 1 if page_size is None else page_size
+        page = 1 if page is None else int(page)
+        page_size = 1 if page_size is None else int(page_size)
         page_size = page_size if 0 < page_size < 1000 else 20
         # 关联的属性
         if select_related:
