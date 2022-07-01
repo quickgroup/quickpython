@@ -79,5 +79,9 @@ class Controller:
     def error(msg="ERROR", code=500):
         return Result.error(msg, code)
 
+    @staticmethod
+    def redirect(url, msg=None, wait=None):
+        raise ResponseException(url=url, code=200, msg=msg, wait=wait)
+
     def __getattr__(self, name):
         return getattr(self.pro_obj, name)

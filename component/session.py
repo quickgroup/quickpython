@@ -64,7 +64,7 @@ class Session:
         # data = cache.get(CACHE_NAME, {})
         # del data[self.sess_id]
         # self._data_save(data)
-        cache.delete(CACHE_NAME)
+        cache.delete(self._cache_name)
 
     def _data(self):
         return cache.get(self._cache_name, {})

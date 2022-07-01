@@ -52,8 +52,7 @@ class QPCache:
         data = {} if data is None else data
         with open(path, 'wb') as f:
             if serialize_type == 'pickle':
-                log.info("data={}".format(data))
-                content = pickle.dumps(data)
+                content = pickle.dumps(data)        # 不支持序列化的对象会报错 none not call
             else:
                 data = data if isinstance(data, dict) else {}
                 content = json.dumps(data, ensure_ascii=False)
