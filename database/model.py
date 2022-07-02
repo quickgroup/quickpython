@@ -87,7 +87,9 @@ class Model:
         args = list(args)
         where = {'key': None, 'type': '=', 'val': None}
         # 字典查询条件: id__eq、id__in
-        if len(kwargs) > 0:
+        if len(args) == 0 and len(kwargs) == 0:
+            return self
+        elif len(kwargs) > 0:
             for it, val in kwargs.items():
                 if it.find('__') > -1:
                     if empty(val):
@@ -243,7 +245,7 @@ class Model:
 
     def remove(self):
         """模型删除方法"""
-        if len(self.__query__.get_map()) == 0:
+        if len(self.__query__.__get_map__()) == 0:
             pk, pk_val = self.__get_pk_val__()
             self.where(pk == pk_val)
         # 软删除
@@ -272,11 +274,11 @@ class Model:
     """
     def update(self, data):
         # 是否未加载就保存，那就先查询
-        if self.__is_load() and len(self.__query__.get_map()) > 0:
+        if self.__is_load() and len(self.__query__.__get_map__()) > 0:
             self.__query__.update(data)
 
     def delete(self):
-        if self.__is_load() and len(self.__query__.get_map()) > 0:
+        if self.__is_load() and len(self.__query__.__get_map__()) > 0:
            self.__query__.delete()     # 实际删除
 
     def aggregation(self, *args):
@@ -433,15 +435,15 @@ class Model:
     def paginate(self, page=None, page_size=None, params=None, select_related=True):
         """分页整理查询"""
         page = 1 if page is None else int(page)
-        page_size = 1 if page_size is None else int(page_size)
+        page_size = 20 if page_size is None else int(page_size)
         page_size = page_size if 0 < page_size < 1000 else 20
         # 关联的属性
         if select_related:
             related_attrs = [it for it in self.__attrs__ if isinstance(it, RelationModel)]
             self.withs(related_attrs)
         # 查询
-        total = self.__query__.count()
+        count = self.__query__.count()
         rows = self.__query__.page(page, page_size).select()
-        return Pagination(rows, page, page_size, total, params)
+        return Pagination(rows, page, page_size, count, params)
 
 

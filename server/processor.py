@@ -85,7 +85,7 @@ class ProcessorController(web.RequestHandler):
             return e
         except BaseException as e:
             logging.exception(e)
-            return "请求异常：{}".format(e)
+            return "系统异常：{}".format(e)
         finally:
             logging.info("{} {} {}ms".format(self.get_status(), self.request.path, int(time.time() * 1000) - self._on_mtime))
 

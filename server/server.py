@@ -43,10 +43,14 @@ class Core:
         """启动web环境"""
         cls.init(Config.MODE_WEB)
         # 配置
+        settings = {
+            # 'debug': SETTINGS['debug'],
+        }
+        # 实例化应用
         application = tornado.web.Application(ROUTES, **{
             'template_path': SETTINGS['template_path'],
             'ui_methods': SETTINGS['ui_methods'],
-        })  # , debug=SETTINGS['debug'])
+        }, **settings)
         # 启动web
         server = cls.server = tornado.web.HTTPServer(application, decompress_request=True)
         if Config.IS_WIN32:

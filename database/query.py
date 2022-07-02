@@ -226,8 +226,12 @@ class QuerySet(object):
         'RANGE': 'RANGE',
     }
 
-    def get_map(self):
+    def __get_map__(self):
         return self.__map
+
+    def __set_map__(self, map):
+        self.__map = map
+        return self
 
     def __com_where_sql(self, to_str=True):
         """构建WHERE条件"""
@@ -349,9 +353,11 @@ class QuerySet(object):
         return result
 
     def value(self, field):
+        _fields = self.__fields
         self.__fields = [field]
         sql = self.__com_query_sql()
         count, result, _ = self.connect().execute(sql)
+        self.__fields = _fields
         return 0 if result is None else result[field]
 
     def count(self):
