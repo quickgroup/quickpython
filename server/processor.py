@@ -178,6 +178,7 @@ class ProcessorController(web.RequestHandler):
     @classmethod
     def load_controller_action(cls, pro_obj, path, path_arr):
         """找到对应控制器和方法"""
+        path_arr = list(filter(lambda x: len(x) > 0, path_arr))
         pa = path_arr[1:] if len(path_arr) > 0 and path_arr[0] == '' else path_arr
         if len(pa) == 0 or pa[0] == '':
             pa.extend(["index", "index", "index"])
