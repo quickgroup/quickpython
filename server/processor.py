@@ -154,19 +154,13 @@ class ProcessorController(web.RequestHandler):
 
     @classmethod
     def scan_dir(cls, path):
-        ret = []
-        for it in os.listdir(path):
-            if it[2:] != '__':
-                ret.append(it)
+        ret = list(filter(lambda x: x[2:] != '__', os.listdir(path)))
         ret.sort()
         return ret
 
     @classmethod
     def scan_file(cls, path):
-        ret = []
-        for it in os.listdir(path):
-            if it[:1] != '_':
-                ret.append(it)
+        ret = list(filter(lambda x: x[:1] != '_', os.listdir(path)))
         ret.sort()
         return ret
 
@@ -254,7 +248,6 @@ class ProcessorController(web.RequestHandler):
             return True
 
         return False
-
 
     def on_finish(self):
         self._is_finish = True
