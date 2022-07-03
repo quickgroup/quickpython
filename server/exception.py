@@ -5,7 +5,7 @@ class AppException(Exception):
 
 
 class ResponseException(AppException):
-    def __init__(self, msg, url=None, data=None, wait=None, code=302):
+    def __init__(self, msg, url=None, data=None, wait=None, code=500):
         super().__init__(msg)
         self.code = code
         self.msg = msg

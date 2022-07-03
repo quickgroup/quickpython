@@ -165,9 +165,10 @@ class QuerySet(object):
         return self
 
     def order(self, field, asc='ASC'):
-        if 'order' not in self.__options:
-            self.__options['order'] = []
-        self.__options['order'].append("{} {}".format(format_field(field), asc))
+        if not_empty(field):
+            if 'order' not in self.__options:
+                self.__options['order'] = []
+            self.__options['order'].append("{} {}".format(format_field(field), asc.upper()))
         return self
 
     def group(self, group):

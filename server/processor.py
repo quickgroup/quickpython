@@ -83,6 +83,9 @@ class ProcessorController(web.RequestHandler):
 
         except ResponseException as e:
             return e
+        except tornado.template.ParseError as e:
+            logger.exception(e)
+            return ResponseException("页面模板异常：{}".format(str(e)), code=500)
         except BaseException as e:
             logging.exception(e)
             return "系统异常：{}".format(e)
@@ -194,7 +197,7 @@ class ProcessorController(web.RequestHandler):
         url_html = SETTINGS['url_html']
 
         module, controller, action = pa[0], '.'.join(pa[1:-1]), pa[-1]
-        module, controller, action = module.lower(), controller.lower(), action.lower()
+        module, controller, action = module.lower(), controller.lower(), action
         if module in cls.MODULES:
             if controller in cls.MODULES[module]:
                 action = action.replace(url_html, '')
@@ -221,7 +224,12 @@ class ProcessorController(web.RequestHandler):
         self.set_header('Accept-Language', 'zh-CN,zh;q=0.9')
         # 分别处理
         if isinstance(ret, ResponseRenderException):
-            return self.render(template_name=ret.tpl_name, **ret.data)
+            try:
+                return self.render(template_name=ret.tpl_name, **ret.data)
+            except BaseException as e:
+                logger.exception(e)
+                ret = ResponseException("页面异常：{}".format(str(e)), code=500)
+                return Handler.return_response(self, ret)
         elif isinstance(ret, ResponseFileException):
             return Handler.return_file(self, ret.file, ret.mime)
         elif isinstance(ret, ResponseException):

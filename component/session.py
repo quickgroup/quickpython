@@ -25,10 +25,14 @@ class Session:
         handler = handler
         self.name = self.name if session_name is None else session_name
         self.sess_id = handler.get_cookie(self.name)
+        self.__data = None
         if self.sess_id is None:
             self.sess_id = self._gen_session_id()
+            self.__data = {}
             cache.set(self._cache_name, {}, self.expire)
             handler.set_cookie(self.name, self.sess_id, max_age=self.expire)
+        else:
+            self.__data = cache.get(self._cache_name, {})
 
     @classmethod
     def _gen_session_id(cls):
@@ -44,34 +48,31 @@ class Session:
         return self.delete(key)
 
     def get(self, key, def_val=None):
-        return self._data().get(key, def_val)
+        return self.__data.get(key, def_val)
 
     def set(self, key, val):
         if val is None:
             return self.delete(key)
-        data = self._data()
-        data[key] = val
-        self._data_save(data)
+        self.__data[key] = val
+        self._data_save()
 
     def delete(self, key):
-        data = self._data()
-        if key in data:
-            del data[key]
-            self._data_save(data)
+        if key in self.__data:
+            del self.__data[key]
+            self._data_save()
 
     def destroy(self):
         """从大字典删除session_id"""
         # data = cache.get(CACHE_NAME, {})
         # del data[self.sess_id]
-        # self._data_save(data)
+        # self._data_save()
+        self.__data = {}
         cache.delete(self._cache_name)
 
-    def _data(self):
-        return cache.get(self._cache_name, {})
+    def _data_save(self):
+        """保存数据到缓存"""
+        cache.set(self._cache_name, self.__data, True)
 
     @property
     def _cache_name(self):
         return CACHE_NAME + self.sess_id
-
-    def _data_save(self, data):
-        cache.set(self._cache_name, data, True)

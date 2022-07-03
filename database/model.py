@@ -313,7 +313,6 @@ class Model:
 
     def __getattr__(self, name):
         # 在model上未找到的属性，到
-        # print("在model上未找到的属性", name)
         if hasattr(self.__query__, name):
 
             def proxy_method(*args, **kwargs):
@@ -328,7 +327,7 @@ class Model:
             return proxy_method
 
         # raise Exception("未在模型对象{}上找到名为'{}'的属性或方法".format(self.name, name))
-        return None
+        return object.__getattribute__(self, name)
 
     def __getattribute__(self, attr_name, attr_direct=False):
         attr = object.__getattribute__(self, attr_name)
@@ -357,6 +356,16 @@ class Model:
             return attr.model
 
         return attr
+
+    """兼容字典操作属性"""
+    def __getitem__(self, item):
+        return self.__getattr__(item)
+
+    def __setitem__(self, key, value):
+        return self.__setattr__(key, value)
+
+    def __delitem__(self, key):
+        self.__setattr__(key, None)
 
     def __str__(self):
         pk, pk_val = self.__get_pk_val__()

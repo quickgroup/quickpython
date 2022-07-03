@@ -68,7 +68,10 @@ class Config:
         console_handler = logging.StreamHandler()
         # 文件
         encoding = env.get("encoding", "UTF-8")
-        file_path = '{}/{}'.format(LOGS_PATH, cls.get_log_file_name())
+        file_name = "{}.log".format(cls.MODE.lower())
+        if cls.MODE == cls.MODE_CMD:
+            file_name = "{}_{}.log".format(cls.MODE.lower(), datetime.datetime.now().strftime("%Y-%m-%d"))
+        file_path = '{}/{}'.format(LOGS_PATH, file_name)
         file_handler = TimedRotatingFileHandler(file_path, when='D', backupCount=33, encoding=encoding)
         file_handler.setLevel(logging.DEBUG)
         # 全局
@@ -100,12 +103,6 @@ class Config:
     @classmethod
     def get_logger(cls, name):
         return logging.getLogger(name)
-
-    @classmethod
-    def get_log_file_name(cls):
-        if cls.MODE == cls.MODE_CMD:
-            return "{}_{}.log".format(cls.MODE_CMD.lower(), datetime.datetime.now().strftime("%Y-%m-%d"))
-        return "{}.log".format(cls.MODE_CMD.lower())
 
     @classmethod
     def web_pro_count(cls, num=None):
