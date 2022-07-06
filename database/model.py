@@ -293,11 +293,11 @@ class Model:
     def __is_load(self):
         return self.__get_pk_val__() is not None
 
-    def __load_data(self, data):
+    def __load_data(self, data: dict):
         if data is not None:
-            for key in data:
+            for key, val in data.items():
                 if key in self.__attrs__:
-                    self.__setattr__(key, data[key])
+                    self.__setattr__(key, val)
 
     def __setattr__(self, name: str, value, attr_direct=False):
         # logger.debug("__setattr__ {}:{}".format(id(self), key))

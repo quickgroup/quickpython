@@ -26,6 +26,11 @@ def not_empty(obj):
     return empty(obj) is False
 
 
+def empty_val(obj, def_val):
+    """不等于空赋值def_val"""
+    return None if empty(obj) else def_val
+
+
 def load_cls(cls_path, **kwargs):
     model_path, cls_name = cls_path.rsplit(".", 1)
     module = importlib.import_module(model_path)
