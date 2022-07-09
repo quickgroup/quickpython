@@ -5,7 +5,7 @@ from ..config import Config
 log = logging.getLogger(__name__)
 
 # default、file
-CACHE_TYPE = 'file'
+CACHE_TYPE = 'file'     # file存在性能问题
 ENCODE = "utf8"
 serialize_type = 'pickle'
 

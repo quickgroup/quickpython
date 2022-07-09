@@ -5,7 +5,7 @@ from quickpython.config import Config, env
 # app配置
 SETTINGS = {
     'debug': env.get('app.debug', False),
-    'port': env.get('app.port', False),
+    'port': env.get('app.port', 32000),
     'version': '0.2.1',
     'template_path': 'app',
     'public_path': 'public',
