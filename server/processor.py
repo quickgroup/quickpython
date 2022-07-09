@@ -1,16 +1,16 @@
 import signal, logging, mimetypes
 import importlib, time, os, inspect
-from typing import Optional, Awaitable
+from typing import Optional, Awaitable, Any
 from concurrent.futures import ThreadPoolExecutor
 
 import tornado
-from tornado import web
+from tornado import web, httputil
 from tornado.concurrent import run_on_executor
 
 import config
 import quickpython
 from .exception import *
-from .contain import Controller, Request, Handler
+from .contain import Controller, Request, HandlerHelper
 from .settings import SETTINGS
 from quickpython.component.function import *
 from quickpython.component.result import Result
@@ -20,9 +20,15 @@ logger.setLevel(logging.INFO)
 encoding = SETTINGS['encoding']
 
 
-class ProcessorController(web.RequestHandler):
+class ProcessorHandler(web.RequestHandler):
 
     executor = ThreadPoolExecutor(max_workers=config.Config.web_thr_count(SETTINGS['pro_thr_num']))
+
+    def __init__(self, application: "Application", request: httputil.HTTPServerRequest, **kwargs: Any):
+        super().__init__(application, Request(request), **kwargs)
+        self.params = {}        # 收集到的请求参数
+        self.path = '/'         # 请求路径
+        self.path_arr = []      # 请求路径分割数组
 
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
         pass
@@ -34,7 +40,7 @@ class ProcessorController(web.RequestHandler):
         if resp_content is True:
             self.finish()
             return
-        if self.response_write(resp_content) is False:
+        if self.response_write(resp_content) is False:  # =False是未处理
             self.finish()
             return
 
@@ -43,7 +49,7 @@ class ProcessorController(web.RequestHandler):
         self.request.method = 'POST'
         resp_content = yield self._dispose(*args)
         if resp_content is True:
-            # self.finish()
+            self.finish()
             return
         if self.response_write(resp_content) is False:  # =False是未处理
             self.finish()
@@ -55,25 +61,18 @@ class ProcessorController(web.RequestHandler):
             # 初始数据
             self._on_mtime = int(time.time() * 1000)
             self._is_finish = False
-            # 请求信息
-            request = self.request = Request(self.request)
-            request.method = 'POST' if hasattr(self, 'method') is None else request.method
-            logger.debug("method={}, args={}".format(request.method, args))
-            remote_ip = request.remote_ip
-            path = self.path = self.request.path
-            path = path.replace("//", "/")
-            path_arr = self.path_arr = [] if path == '/' else path.split('/')
-            # 是否是ajax请求
-            self.request.is_ajax = True if request.headers.get('x-requested-with') == 'XMLHttpRequest' else False
-            # 是否是资源文件下载
-            if Handler.return_file(self, path):
+            # 请求处理
+            HandlerHelper.before(self)
+            logger.debug("method={}, args={}".format(self.request.method, args))
+            # 是否是资源文件下载（需要对upload进行鉴权处理
+            if HandlerHelper.return_file(self, self.path):
                 return True
             # 收集请求参数
-            params = self.params = Handler.parse_params(self)
-            logger.debug("path={}, params={}".format(path, params))
+            params = self.params = HandlerHelper.parse_params(self)
+            logger.debug("path={}, params={}".format(self.path, params))
             # 寻找控制器
-            controller, controller_action = self.load_controller_action(self, path, path_arr)
-            controller.__initialize_request__(path, params, request)
+            controller, controller_action = self.load_controller_action(self, self.path, self.path_arr)
+            controller.__initialize_request__(self.path, params, self.request)
 
             # 执行控制器方法
             # hooker.trigger('request_before', controller)
@@ -175,7 +174,6 @@ class ProcessorController(web.RequestHandler):
     @classmethod
     def load_controller_action(cls, pro_obj, path, path_arr):
         """找到对应控制器和方法"""
-        path_arr = list(filter(lambda x: len(x) > 0, path_arr))
         pa = path_arr[1:] if len(path_arr) > 0 and path_arr[0] == '' else path_arr
         if len(pa) == 0 or pa[0] == '':
             pa.extend(["index", "index", "index"])
@@ -223,11 +221,11 @@ class ProcessorController(web.RequestHandler):
             except BaseException as e:
                 logger.exception(e)
                 ret = ResponseException("页面异常：{}".format(str(e)), code=500)
-                return Handler.return_response(self, ret)
+                return HandlerHelper.return_response(self, ret)
         elif isinstance(ret, ResponseFileException):
-            return Handler.return_file(self, ret.file, ret.mime)
+            return HandlerHelper.return_file(self, ret.file, ret.mime)
         elif isinstance(ret, ResponseException):
-            return Handler.return_response(self, ret)
+            return HandlerHelper.return_response(self, ret)
         elif isinstance(ret, AppException):
             status_code = 500
             ret = str(ret)

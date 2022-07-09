@@ -1,9 +1,9 @@
 """
     模型关联
 """
-import logging
 from .func import *
-logger = logging.getLogger(__name__)
+from ..log import get_logger
+logger = get_logger()
 
 
 class RelationModel:

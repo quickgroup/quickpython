@@ -15,7 +15,20 @@ dispatch_jump_html = env.get("ROOT_PATH") + "/quickpython/view/jump.html"
 exception_html = env.get("ROOT_PATH") + "/quickpython/view/exception.html"
 
 
-class Handler:
+class HandlerHelper:
+
+    @staticmethod
+    def before(hdl: web.RequestHandler):
+        request = hdl.request = Request(hdl.request)
+        request.method = 'POST' if hasattr(hdl, 'method') is None else request.method
+        # 用户IP
+        hdl.client_ip = request.remote_ip
+        # 路径处理
+        path = hdl.path = hdl.request.path.replace("//", "/")
+        path_arr = [] if path == '/' else path.split('/')
+        hdl.path_arr = list(filter(lambda x: len(x) > 0, path_arr))
+        # 是否ajax
+        hdl.request.is_ajax = True if request.headers.get('x-requested-with') == 'XMLHttpRequest' else False
 
     @staticmethod
     def parse_params(hdl: web.RequestHandler):

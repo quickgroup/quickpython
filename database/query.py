@@ -2,13 +2,13 @@
     查询基础操作集合
     环境：pymysql>=1.0.2
 """
-import logging, time, re, pymysql
+import time, re, pymysql
 from .connector.connection import Connection
 from .contain.func import *
 from .contain.component import *
 from . import setttings
-
-logger = logging.getLogger(__name__)
+from .log import get_logger
+logger = get_logger()
 
 options = setttings.DATABASES['default']['options']
 

@@ -1,7 +1,9 @@
-import logging, math
+import math
 from urllib.parse import urlencode
 from .func import *
-log = logging.getLogger(__name__)
+
+from ..log import get_logger
+logger = get_logger()
 
 
 class Pagination:
@@ -32,7 +34,7 @@ class Pagination:
         prev_btn = disable_li(1) if prev_page <= 0 else href_li(prev_page, '上一页')
         if self.page < self.page_count:
             next_page = self.page if self.page + 1 > self.page_count else self.page + 1
-            log.debug("next_page={}".format(next_page))
+            logger.debug("next_page={}".format(next_page))
             next_btn = href_li(next_page, '下一页')
         else:
             next_btn = ''

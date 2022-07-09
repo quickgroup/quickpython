@@ -1,8 +1,8 @@
-import os, logging, urllib3, sys, datetime
+import os, logging, urllib3, sys
 import threading
 from multiprocessing import cpu_count
-from logging.handlers import TimedRotatingFileHandler
 from quickpython.component.env import env
+from quickpython.component.logging import LoggingManger
 
 logger = logging.getLogger(__name__)
 # 屏蔽ssl警告
@@ -10,14 +10,14 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 ROOT_PATH = str(os.getcwd()).replace('\\', '/')
 CACHE_PATH = ROOT_PATH + '/cache'       # cache目录
-LOGS_PATH = ROOT_PATH + '/cache/logs'   # 日志目录
+LOG_DIR = ROOT_PATH + '/cache/logs'   # 日志目录
 DATA_PATH = ROOT_PATH + '/data'         # 数据目录
 PUBLIC_PATH = ROOT_PATH + '/public'     # 资源目录
 UPLOADS_PATH = ROOT_PATH + '/public/uploads'    # 上传目录
 
 env.set('ROOT_PATH', ROOT_PATH)
 env.set('CACHE_PATH', CACHE_PATH)
-env.set('LOGS_PATH', LOGS_PATH)
+env.set('LOG_DIR', LOG_DIR)
 env.set('DATA_PATH', DATA_PATH)
 env.set('PUBLIC_PATH', PUBLIC_PATH)
 env.set('UPLOADS_PATH', UPLOADS_PATH)
@@ -36,11 +36,10 @@ class Config:
     # 目录
     ROOT_PATH = ROOT_PATH
     CACHE_PATH = CACHE_PATH
-    LOGS_PATH = LOGS_PATH
+    LOG_DIR = LOG_DIR
     DATA_PATH = DATA_PATH
     PUBLIC_PATH = PUBLIC_PATH
     UPLOADS_PATH = UPLOADS_PATH
-    DIRS = [CACHE_PATH, LOGS_PATH, DATA_PATH, UPLOADS_PATH]
 
     # 线程数据
     _local = threading.local()
@@ -48,36 +47,17 @@ class Config:
     @classmethod
     def init(cls, mode):
         cls.MODE = str(mode).upper()
+        env.set('mode', cls.MODE)
         cls.dirs_init()
-        cls.logging_init()
+        LoggingManger.init(LOG_DIR, cls.MODE, cls.DEBUG)
 
     @classmethod
     def dirs_init(cls):
-        for it in cls.DIRS:
+        DIRS = [CACHE_PATH, LOG_DIR, DATA_PATH, UPLOADS_PATH]
+        for it in DIRS:
             if os.path.exists(it) is False:
                 logger.info('创建目录：{}'.format(it))
                 os.makedirs(it)
-
-    @classmethod
-    def logging_init(cls):
-        """初始化日志模块"""
-        logging.getLogger("asyncio").setLevel(logging.WARNING)
-        logging.getLogger("matplotlib").setLevel(logging.WARNING)
-        logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-        # 控制台
-        console_handler = logging.StreamHandler()
-        # 文件
-        encoding = env.get("encoding", "UTF-8")
-        file_name = "{}.log".format(cls.MODE.lower())
-        if cls.MODE == cls.MODE_CMD:
-            file_name = "{}_{}.log".format(cls.MODE.lower(), datetime.datetime.now().strftime("%Y-%m-%d"))
-        file_path = '{}/{}'.format(LOGS_PATH, file_name)
-        file_handler = TimedRotatingFileHandler(file_path, when='D', backupCount=33, encoding=encoding)
-        file_handler.setLevel(logging.DEBUG)
-        # 全局
-        formatter_str = '%(asctime)s %(levelname)s [%(filename)s:%(funcName)s:%(lineno)d]\t%(message)s'
-        level = logging.DEBUG if cls.DEBUG else logging.INFO
-        logging.basicConfig(format=formatter_str, level=level, handlers=[console_handler, file_handler])
 
     @staticmethod
     def get(key, default=None):

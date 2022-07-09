@@ -13,7 +13,7 @@ class Core:
         """监听退出，不能再bind之前调用"""
 
         def signin_exit(signum, frame):
-            # cls.log.info("进程停止")
+            cls.log.info("进程停止")
             tornado.ioloop.IOLoop.instance().stop()
             cls.log.info("进程停止 完成")
             exit(0)

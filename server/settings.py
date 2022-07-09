@@ -66,9 +66,9 @@ LOGGING = {
 }
 
 # 路由
-from .processor import ProcessorController
+from .processor import ProcessorHandler
 ROUTES = [
-    (r"/(.*)", ProcessorController),    # 默认处理控制器
+    (r"/(.*)", ProcessorHandler),    # 默认处理控制器
 ]
 
 # TODO::将配置加载到env

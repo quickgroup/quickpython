@@ -2,15 +2,14 @@
     模型基类
 """
 
-import logging, copy
+import copy
 from .query import QuerySet
 from .contain.func import *
 from .contain.columns import *
 from .contain.relation import *
 from .contain.pagination import Pagination
-
-
-logger = logging.getLogger(__name__)
+from .log import get_logger
+logger = get_logger()
 
 
 class Model:
@@ -102,7 +101,11 @@ class Model:
         elif len(args) > 0 and isinstance(args[0], ColumnCmp):
             where = args[0].__dict__()
         elif len(args) == 1 and isinstance(args[0], dict):
-            self.__query__ = self.__query__.where(args[0])
+            self.__query__.where(args[0])
+            return self
+        elif len(args) == 1 and isinstance(args[0], list):
+            for it in args[0]:
+                self.__query__.where(it)
             return self
         else:
             where['key'] = args[0]
@@ -274,15 +277,12 @@ class Model:
     """
     def update(self, data):
         # 是否未加载就保存，那就先查询
-        if self.__is_load() and len(self.__query__.__get_map__()) > 0:
+        if len(self.__query__.__get_map__()) > 0:
             self.__query__.update(data)
 
     def delete(self):
-        if self.__is_load() and len(self.__query__.__get_map__()) > 0:
+        if len(self.__query__.__get_map__()) > 0:
            self.__query__.delete()     # 实际删除
-
-    def aggregation(self, *args):
-        return self.__query__.aggregation(*args)
 
     """
         属性控制

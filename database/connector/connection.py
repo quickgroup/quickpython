@@ -5,7 +5,9 @@ import pymysql
 import time, threading, logging
 from .. import setttings
 from ..contain.func import *
-log = logging.getLogger(__name__)
+
+from ..log import get_logger
+log = get_logger()
 
 
 class Connection:
@@ -15,7 +17,7 @@ class Connection:
 
     def __init__(self):
         self.load_config()
-        log.setLevel(logging.DEBUG if self.get_config('echo', True) else logging.INFO)
+        # log.setLevel(logging.DEBUG if self.get_config('echo', True) else logging.INFO)
 
     @classmethod
     def load_config(cls):
