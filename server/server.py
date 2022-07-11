@@ -15,8 +15,9 @@ class Core:
         def signin_exit(signum, frame):
             cls.log.info("进程停止")
             tornado.ioloop.IOLoop.instance().stop()
+            from libs.thread import ThreadManager
+            ThreadManager.exit_abort()
             cls.log.info("进程停止 完成")
-            exit(0)
 
         # signal.signal(signal.SIGQUIT, signin_exit)
         signal.signal(signal.SIGTERM, signin_exit)

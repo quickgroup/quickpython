@@ -162,7 +162,7 @@ class Model:
         return obj
 
     def all(self):
-        logger.warning("此方法为兼容而存在")
+        logger.warning("此方法为兼容而存在，请使用select方法")
         return self.select()
 
     def select(self):
