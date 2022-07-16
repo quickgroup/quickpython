@@ -1,6 +1,6 @@
 import os, threading, time, types, logging
 import json, pickle
-from ..config import Config
+from quickpython.config import Config
 
 log = logging.getLogger(__name__)
 
@@ -81,11 +81,8 @@ class QPCache:
         with cls.__LOCK__:
             if key in data:
                 item = data[key]
-                # log.debug("key={}, item={}, stime={}".format(key, item, cls.stime()))
                 if item[TIME_K] > cls.stime():
                     return item[VAL_K]
-            else:
-                log.debug("key={} not fund".format(key))
 
             # 默认数据
             if def_val is not None:

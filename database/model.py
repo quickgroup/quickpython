@@ -246,15 +246,15 @@ class Model:
         self.__modified_fields__ = []
         return 1
 
-    def remove(self):
-        """模型删除方法"""
+    def destroy(self):
+        """模型删除方法：支持软删除"""
         if len(self.__query__.__get_map__()) == 0:
             pk, pk_val = self.__get_pk_val__()
             self.where(pk == pk_val)
         # 软删除
         if self.__soft_delete__ is not None:
             if isinstance(self.__soft_delete__, Datetime):
-                return self.__query__.save({self.__soft_delete__.name: ColumnFunc.now()})  # 软删除
+                return self.__query__.update({self.__soft_delete__.name: ColumnFunc.now()})  # 软删除
             else:
                 raise Exception("不支持的软删除字段类型")
         return self.__query__.delete()

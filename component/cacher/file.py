@@ -1,6 +1,6 @@
 import os, threading, time, types, logging
 import json, pickle
-from ..config import Config
+from quickpython.config import Config
 
 log = logging.getLogger(__name__)
 
@@ -145,6 +145,3 @@ class QPCache:
 
     def __delitem__(self, key):
         return self.delete(key)
-
-
-cache = QPCache()

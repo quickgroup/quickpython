@@ -44,7 +44,7 @@ class DemoModel:
         if user_2 is None:
             raise Exception("未找到nickname = test2 的数据")
         else:
-            user_2.remove()
+            user_2.destroy()
         logger.info("删除成功")
 
     def save_update(self):

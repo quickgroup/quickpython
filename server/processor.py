@@ -18,6 +18,7 @@ from quickpython.component.result import Result
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 encoding = SETTINGS['encoding']
+DS = r"/"
 
 
 class ProcessorHandler(web.RequestHandler):
@@ -60,24 +61,27 @@ class ProcessorHandler(web.RequestHandler):
         try:
             # 初始数据
             self._on_mtime = int(time.time() * 1000)
-            self._is_finish = False
+            self._is_finish = False         # 请求是否结束
+            self._is_res_request = False    # 是否是资源请求
             # 请求处理
             HandlerHelper.before(self)
             logger.debug("method={}, args={}".format(self.request.method, args))
             # 是否是资源文件下载（需要对upload进行鉴权处理
             if HandlerHelper.return_file(self, self.path):
+                self._is_res_request = True
                 return True
             # 收集请求参数
             params = self.params = HandlerHelper.parse_params(self)
             logger.debug("path={}, params={}".format(self.path, params))
             # 寻找控制器
-            controller, controller_action = self.load_controller_action(self, self.path, self.path_arr)
+            controller, controller_action = self.find_controller_action(self, self.path, self.path_arr)
             controller.__initialize_request__(self.path, params, self.request)
 
             # 执行控制器方法
             # hooker.trigger('request_before', controller)
             ret = controller_action()
             # hooker.trigger('request_after', controller)
+
             return "None" if ret is None else ret
 
         except ResponseException as e:
@@ -89,7 +93,8 @@ class ProcessorHandler(web.RequestHandler):
             logging.exception(e)
             return "系统异常：{}".format(e)
         finally:
-            logging.info("{} {} {}ms".format(self.get_status(), self.request.path, int(time.time() * 1000) - self._on_mtime))
+            if self._is_res_request is False:       # 只记录控制器日志
+                logging.info("{} {} {}ms".format(self.get_status(), self.request.path, int(time.time() * 1000) - self._on_mtime))
 
     MODULES = {}
 
@@ -153,13 +158,13 @@ class ProcessorHandler(web.RequestHandler):
 
     @classmethod
     def scan_dir(cls, path):
-        ret = list(filter(lambda x: x[2:] != '__', os.listdir(path)))
+        ret = list(filter(lambda x: os.path.isdir(path + DS + x), os.listdir(path)))
         ret.sort()
         return ret
 
     @classmethod
     def scan_file(cls, path):
-        ret = list(filter(lambda x: x[:1] != '_', os.listdir(path)))
+        ret = list(filter(lambda x: os.path.isfile(path + DS + x), os.listdir(path)))
         ret.sort()
         return ret
 
@@ -172,7 +177,7 @@ class ProcessorHandler(web.RequestHandler):
         return ret
 
     @classmethod
-    def load_controller_action(cls, pro_obj, path, path_arr):
+    def find_controller_action(cls, pro_obj, path, path_arr):
         """找到对应控制器和方法"""
         pa = path_arr[1:] if len(path_arr) > 0 and path_arr[0] == '' else path_arr
         if len(pa) == 0 or pa[0] == '':
