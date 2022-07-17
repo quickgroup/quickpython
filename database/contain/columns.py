@@ -68,15 +68,16 @@ class ColumnBase:
 
     def __get_insert_default__(self):
         val = self.default
-        if not_empty(val):
+        if val is not None:
             return val
-        if not_empty(self.insert_default):
+
+        if self.insert_default is not None:
             if isfunction(self.insert_default):
                 val = self.insert_default()
             else:
                 val = self.insert_default
 
-        if empty(val) and not_empty(self.update_default):
+        if val is None and self.update_default is not None:
             if isfunction(self.update_default):
                 val = self.update_default()
             else:
@@ -85,7 +86,7 @@ class ColumnBase:
 
     def __get_update_default__(self):
         val = self.default
-        if empty(val) and not_empty(self.update_default):
+        if val is None and self.update_default is not None:
             if isfunction(self.update_default):
                 val = self.update_default()
             else:
@@ -185,23 +186,44 @@ field_map = {
 
 
 """
-    字段扩展方法
+    字段方法
 """
 
 
 class ColumnFunc:
 
-    @staticmethod
-    def now():
-        import datetime
-        fmt = "%Y-%m-%d %H:%M:%S"
-        if hasattr(options, 'datetime_fmt') and not_empty(options['datetime_fmt']):
-            fmt = options['datetime_fmt']
-        return datetime.datetime.now().strftime(fmt)
+    class Functions:
 
-    @staticmethod
-    def now_timestamp():
-        return int(time.time())
+        @staticmethod
+        def now():
+            now = ColumnFunc.Functions.__env_datetime_now__()
+            if now is not None:
+                return now
+
+            import datetime
+            fmt = "%Y-%m-%d %H:%M:%S"
+            if hasattr(options, 'datetime_fmt') and not_empty(options['datetime_fmt']):
+                fmt = options['datetime_fmt']
+            return datetime.datetime.now().strftime(fmt)
+
+        @staticmethod
+        def __env_datetime_now__():
+            """指定了环境时间"""
+            try:
+                from quickpython.component import env
+                return env.get(env.DATETIME_NOW)
+            except:
+                return None
+
+        @staticmethod
+        def now_timestamp():
+            return int(time.time())
+
+    """
+    方法做常量宏
+    """
+    now = Functions.now
+    now_timestamp = Functions.now_timestamp
 
 
 def iscolumn(cls):

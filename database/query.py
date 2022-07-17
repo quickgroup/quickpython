@@ -5,7 +5,7 @@
 import time, re, pymysql
 from .connector.connection import Connection
 from .contain.func import *
-from .contain.component import *
+from .contain.extend import *
 from . import setttings
 from .log import get_logger
 logger = get_logger()
@@ -66,6 +66,7 @@ class QuerySet(object):
         self.__join = []
         self.__having = []
         self.__distinct = False
+        self.__for_update = None
         self.__model__ = None
         self.__options = {
             'multi': {},
@@ -310,11 +311,13 @@ class QuerySet(object):
             for item in self.__having:
                 sa.append(item)
 
-        if self.__options.get('order'):
+        if not_empty(self.__options.get('order')):
             sa.append("ORDER BY {}".format(",".join(self.__options.get('order', []))))
-
-        if self.__options.get('limit'):
+        if not_empty(self.__options.get('limit')):
             sa.append("LIMIT {}".format(self.__options['limit']))
+        if not_empty(self.__for_update):
+            sa.append(self.__for_update)
+
         return " ".join(sa)
 
     def build_sql(self):
@@ -384,7 +387,7 @@ class QuerySet(object):
         if len(fields) == 0 or len(values) == 0:
             return 0
 
-        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
+        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
         return self.connect().execute(sql)[0]
 
     def insert_get_id(self, data):
@@ -399,7 +402,7 @@ class QuerySet(object):
         if len(fields) == 0 or len(values) == 0:
             return 0
 
-        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
+        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
 
         # 执行
         count, ret, pk = self.connect().execute_get_id(sql)
@@ -430,7 +433,7 @@ class QuerySet(object):
             return 0
 
         # 表名、更新的字段、限制条件
-        sql = "UPDATE {} SET {} {}".format(format_field(self.__table__), ", ".join(fields), where_str)
+        sql = "UPDATE {} SET {} {}".format(self.__table_name_sql__(), ", ".join(fields), where_str)
         count, ret, _ = self.connect().execute(sql)
         return count
 
@@ -458,18 +461,19 @@ class QuerySet(object):
 
     @staticmethod
     def start_trans():
-        """开启事务"""
         Connection.connect().start_trans()
 
     @staticmethod
     def commit():
-        """提交事务"""
         Connection.connect().commit()
 
     @staticmethod
     def rollback():
-        """回滚事务"""
         Connection.connect().rollback()
+
+    def select_for_update(self, sql="FOR UPDATE"):
+        self.__for_update = sql
+        return self
 
     def __complement_table_name(self, name:str):
         pre_len = len(self.prefix)

@@ -134,29 +134,38 @@ class Connection:
         conn.autocommit(True)
 
     @classmethod
+    def __cur_execute__(cls, cur, sql):
+        try:
+            log.debug(sql)
+            return cur.execute(sql)
+        except BaseException as e:
+            log.exception("SQL: {}".format(sql))
+            raise e
+
+    @classmethod
     def execute(cls, sql):
-        log.debug(sql)
         conn = cls.__conn__()
         cur = cls.get_cursor()
-        count = cur.execute(sql)
+        # count = cur.execute(sql)
+        count = cls.__cur_execute__(cur, sql)
         ret = cur.fetchone()
         return count, ret, cur.description
 
     @classmethod
     def execute_all(cls, sql):
-        log.debug(sql)
         conn = cls.__conn__()
         cur = cls.get_cursor()
-        count = cur.execute(sql)
+        # count = cur.execute(sql)
+        count = cls.__cur_execute__(cur, sql)
         ret = cur.fetchall()
         return count, ret, cur.description
 
     @classmethod
     def execute_get_id(cls, sql):
-        log.debug(sql)
         conn = cls.__conn__()
         cur = cls.get_cursor()
-        count = cur.execute(sql)
+        # count = cur.execute(sql)
+        count = cls.__cur_execute__(cur, sql)
         ret = cur.fetchone()
         ret_id = conn.insert_id()
         return count, ret, ret_id

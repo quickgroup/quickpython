@@ -60,16 +60,8 @@ class Config:
                 os.makedirs(it)
 
     @staticmethod
-    def get(key, default=None):
-        val = env.get(key)
-        if val == "true":
-            val = True
-        elif val == "false":
-            val = False
-
-        if val is None and default is not None:
-            return default
-        return val
+    def get(key, def_val=None):
+        return env.get(key, def_val)
 
     @staticmethod
     def env_get_int(key, default=None):

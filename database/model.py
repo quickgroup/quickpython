@@ -165,7 +165,7 @@ class Model:
         logger.warning("此方法为兼容而存在，请使用select方法")
         return self.select()
 
-    def select(self):
+    def select(self, to_dict=False):
         # 预加载处理（预载入模式开启后，数据返回将进行关联数据填充
         if not_empty(self.__withs__):
             # 加载本表字段
@@ -197,7 +197,7 @@ class Model:
                 obj.eagerly_result(row, self.__withs__)
 
         # logger.debug("ret={}".format(ret))
-        return ret
+        return Model.to_dict(ret) if to_dict else ret
 
     def __query___soft_delete(self):
         """追加软删除列查询条件"""
@@ -205,9 +205,8 @@ class Model:
         return self
 
     def save(self, data=None):
-        # 赋值
-        self.__load_data(data)
-
+        """保存方法"""
+        self.__load_data__(data)
         if self.__is_modified__() is False:
             return
 
@@ -224,7 +223,7 @@ class Model:
         pk_val = getattr(self, pk.name)
         if pk_val is None:
             # 新增还涉及默认数据的列：default、insert_default、update_default
-            for name, col in self.__class__.__table_fields__.items():
+            for name, col in self.__class__.__table_fields__.items():   # type: str, ColumnBase
                 if col.has_insert_default() and (name not in update_data or update_data[name] is None):
                     update_data[name] = col.__get_insert_default__()
 
@@ -293,7 +292,7 @@ class Model:
     def __is_load(self):
         return self.__get_pk_val__() is not None
 
-    def __load_data(self, data: dict):
+    def __load_data__(self, data: dict):
         if data is not None:
             for key, val in data.items():
                 if key in self.__attrs__:
@@ -313,7 +312,7 @@ class Model:
 
     def __getattr__(self, name):
         # 在model上未找到的属性，到
-        if hasattr(self.__query__, name):
+        if hasattr(self.__query__, name):       # 如果query上存在该方法就返回
 
             def proxy_method(*args, **kwargs):
                 method = getattr(self.__query__, name)
@@ -391,7 +390,7 @@ class Model:
 
     def __setstate__(self, state):
         self.__init__()
-        self.__load_data(state)
+        self.__load_data__(state)
 
     def to_dict(self):
         if isinstance(self, list):
