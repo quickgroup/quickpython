@@ -36,8 +36,10 @@ class HandlerHelper:
         解析请求数据
         支持：get、post、json
         """
-        request = hdl.request  # type:Request
+        request = hdl.request
         params = {}
+        for key in request.query_arguments:
+            params[key] = hdl.get_query_argument(key)
         for key in request.arguments:
             params[key] = hdl.get_argument(key)
 
@@ -45,7 +47,8 @@ class HandlerHelper:
         if request.headers.get('content-type', '').find('application/json') > -1:
             try:
                 body = request.body.decode('utf-8')
-                params = json.loads(body)
+                content_params = json.loads(body)
+                params = {**params, **content_params}
             except BaseException as e:
                 logger.error("json请求数据解析异常")
                 logger.error(e)

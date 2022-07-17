@@ -1,42 +1,99 @@
-import sys
+import sys, logging
+
+
+LOCK_EX = 1
+LOCK_NB = 2
+LOCK_SH = 3
+LOCK_UN = 4
 
 
 IS_WIN32 = sys.platform == "win32"
-if IS_WIN32 is False:
+if IS_WIN32:
+    import win32con, win32file, pywintypes
+    LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
+    LOCK_NB = win32con.LOCKFILE_FAIL_IMMEDIATELY
+
+else:
+    from fcntl import LOCK_EX, LOCK_SH, LOCK_NB
     import fcntl
 
 
 class FLock:
-    LOCK_EX: int
-    LOCK_NB: int
-    LOCK_SH: int
-    LOCK_UN: int
+    LOCK_EX = LOCK_EX
+    LOCK_NB = LOCK_NB
+    LOCK_SH = LOCK_SH
+    LOCK_UN = LOCK_UN
 
     def __init__(self, file_name):
         self.file_name = file_name
-        self.fd = None
-
-    def fcntl(self, op, arg=0):
-        pass
-
-    def ioctl(self, op, arg=0, mutable_flag=True):
-        if mutable_flag:
-            return 0
-        else:
-            return ""
-
-    def flock(self, op):
+        self.fd = open(file_name, 'w')
         if IS_WIN32:
-            pass
+            self.__overlapped__ = pywintypes.OVERLAPPED()
+
+    def lock(self, flags=LOCK_EX):
+        if IS_WIN32:
+            hfile = win32file._get_osfhandle(self.fd.fileno())
+            win32file.LockFileEx(hfile, flags, 0, 0xffff0000, self.__overlapped__)
         else:
-            self.fd = open(self.file_name, 'w+')
-            fcntl.fcntl(self.fd, fcntl.LOCK_EX)
+            fcntl.flock(self.fd.fileno(), flags)
 
-    def lockf(self, operation, length=0, start=0, whence=0):
-        pass
+        return self
 
-    def lock(self, op):
-        return self.flock(fcntl.LOCK_EX)
+    def unlock(self):
+        if IS_WIN32:
+            hfile = win32file._get_osfhandle(self.fd.fileno())
+            win32file.UnlockFileEx(hfile, 0, 0xffff0000, self.__overlapped__)
+        else:
+            fcntl.flock(self.fd.fileno(), fcntl.LOCK_UN)
 
-    def unlock(self, op):
-        return self.flock(fcntl.LOCK_UN)
+        return self
+
+    def __enter__(self):
+        self.lock()
+
+    def __exit__(self, exc_type, value, traceback):
+        self.unlock()
+
+
+if __name__ == '__main__':
+    import threading, time
+    formatter_str = '%(asctime)s %(levelname)s [%(filename)s:%(funcName)s:%(lineno)d]\t%(message)s'
+    logging.basicConfig(format=formatter_str, level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    logging.info("测试文件锁")
+
+    with open('test.file', 'w+') as f:
+        f.seek(0)
+        f.write("")
+        f.flush()
+
+
+    def opt_file(num):
+        ident = threading.current_thread().ident
+
+        # 使用方式一
+        # flock = FLock('lock.file').lock()
+        # with open('test.file', 'r+') as f:
+        #     f.seek(0)
+        #     content = f.read()
+        #     logging.info('content={}'.format(content))
+        #     content += "{}, thr={}\n".format(num, ident)
+        #     f.seek(0)
+        #     f.write(content)
+        #     f.flush()
+        # flock.unlock()
+
+        # 使用方式二
+        with FLock():
+            with open('test.file', 'r+') as f:
+                f.seek(0)
+                content = f.read()
+                logging.info('content={}'.format(content))
+                content += "{}, thr={}\n".format(num, ident)
+                f.seek(0)
+                f.write(content)
+                f.flush()
+
+    thr_list = [threading.Thread(target=opt_file, args=(it,)) for it in range(10)]
+    [thr.start() for thr in thr_list]
+
+    logging.info("测试文件锁 完成")

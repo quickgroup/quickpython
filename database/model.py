@@ -214,6 +214,7 @@ class Model:
         获取修改列的值，获取到的值经过__getattribute__处理会是直接的基本数据类型
         """
         update_data = {key: getattr(self, key) for key in self.__modified_fields__}
+        local_data = self.__dict__()
 
         # 新增还是更新
         pk = self.__class__.__table_pk__
@@ -224,6 +225,8 @@ class Model:
         if pk_val is None:
             # 新增还涉及默认数据的列：default、insert_default、update_default
             for name, col in self.__class__.__table_fields__.items():   # type: str, ColumnBase
+                if name in local_data and local_data[name] is not None:     # 跳过设置了值的数据
+                    continue
                 if col.has_insert_default() and (name not in update_data or update_data[name] is None):
                     update_data[name] = col.__get_insert_default__()
 
@@ -235,6 +238,8 @@ class Model:
         else:
             # 更新涉及的数据列：update_default
             for name, col in self.__class__.__table_fields__.items():
+                if name in local_data and local_data[name] is not None:
+                    continue
                 if col.has_update_default() and (name not in update_data or update_data[name] is None):
                     update_data[name] = col.__get_update_default__()
 
@@ -249,6 +254,8 @@ class Model:
         """模型删除方法：支持软删除"""
         if len(self.__query__.__get_map__()) == 0:
             pk, pk_val = self.__get_pk_val__()
+            if pk_val is None:
+                return
             self.where(pk == pk_val)
         # 软删除
         if self.__soft_delete__ is not None:

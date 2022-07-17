@@ -1,5 +1,5 @@
 
 from .env import env
 from .result import Result
-from .cache import cache
+from .cacher import cache
 from .session import Session

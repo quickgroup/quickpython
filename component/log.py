@@ -38,9 +38,9 @@ class LoggingManger:
         file_path = '{}/{}'.format(log_dir, file_name)
         file_handler = TimedRotatingFileHandler(file_path, when='D', backupCount=33, encoding=encoding)
         # 全局
-        formatter_str = '%(asctime)s %(levelname)s [%(filename)s:%(funcName)s:%(lineno)d]\t%(message)s'
+        format_str = '%(asctime)s %(levelname)s [%(filename)s:%(funcName)s:%(lineno)d]\t%(message)s'
         level = logging.DEBUG if debug else logging.INFO
-        logging.basicConfig(format=formatter_str, level=level, handlers=[console_handler, file_handler])
+        logging.basicConfig(format=format_str, level=level, handlers=[console_handler, file_handler])
 
     @classmethod
     def getLogger(cls, module):

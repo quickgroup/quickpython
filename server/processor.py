@@ -72,7 +72,7 @@ class ProcessorHandler(web.RequestHandler):
                 return True
             # 收集请求参数
             params = self.params = HandlerHelper.parse_params(self)
-            logger.debug("path={}, params={}".format(self.path, params))
+            logger.info("path={}, params={}".format(self.path, params))
             # 寻找控制器
             controller, controller_action = self.find_controller_action(self, self.path, self.path_arr)
             controller.__initialize_request__(self.path, params, self.request)

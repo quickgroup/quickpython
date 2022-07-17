@@ -95,7 +95,7 @@ class Connection:
             curr = cls.__conn__().cursor(pymysql.cursors.DictCursor)
             local_set(Connection._local, '__db_pm_connection_curr', curr)
 
-        return curr
+        return curr     # type: pymysql.connect.cursorclass
 
     @classmethod
     def _check_connection_timeout(cls):
@@ -138,6 +138,10 @@ class Connection:
         try:
             log.debug(sql)
             return cur.execute(sql)
+
+        except SystemExit as e:
+            cls.close()
+            raise e
         except BaseException as e:
             log.exception("SQL: {}".format(sql))
             raise e
@@ -176,4 +180,5 @@ class Connection:
 
     @classmethod
     def close(cls):
+        cls.get_cursor().close()
         cls.__conn__().close()

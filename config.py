@@ -2,7 +2,7 @@ import os, logging, urllib3, sys
 import threading
 from multiprocessing import cpu_count
 from quickpython.component.env import env
-from quickpython.component.logging import LoggingManger
+from quickpython.component.log import LoggingManger
 
 logger = logging.getLogger(__name__)
 # 屏蔽ssl警告
