@@ -15,7 +15,7 @@ DATABASES = {
         'port': env.get('database.port', 3306),
         'prefix': env.get('database.prefix', ""),
         'echo': env.get('database.echo', True),
-        'wait_timeout': 60,
+        'wait_timeout': env.get('database.wait_timeout', 3600),
         'options': {
             'init_command': 'SET default_storage_engine=INNODB;',
             'charset': 'utf8',
