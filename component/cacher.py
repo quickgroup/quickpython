@@ -149,10 +149,10 @@ class QPFileCache(CacherBase):
 
 class QPRedisCache(CacherBase):
 
-    HOST = env.get('radis.host', "127.0.0.1")
-    PORT = env.get('radis.port', 6379)
-    PASSWORD = env.get('radis.password', '')
-    DATABASE = env.get('radis.database', 8)
+    HOST = env.get('redis.host', "127.0.0.1")
+    PORT = env.get('redis.port', 6379)
+    PASSWORD = env.get('redis.password', '')
+    DATABASE = env.get('redis.database', 8)
     PREFIX = ""
 
     def __init__(self):
