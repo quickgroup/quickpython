@@ -62,15 +62,10 @@ class Session:
             self._data_save()
 
     def destroy(self):
-        """从大字典删除session_id"""
-        # data = cache.get(CACHE_NAME, {})
-        # del data[self.sess_id]
-        # self._data_save()
         self.__data = {}
         cache.delete(self._cache_name)
 
     def _data_save(self):
-        """保存数据到缓存"""
         cache.set(self._cache_name, self.__data, True)
 
     @property
