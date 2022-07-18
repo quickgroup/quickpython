@@ -81,7 +81,7 @@ class Connection:
             conn.autocommit(True)
             conn.__thr_id = get_thr_id()
             conn.__in_transaction = False   # 非事务中
-            conn.__conn_start_time = int(time.time())   # 连接时间
+            conn.__expire_time = int(time.time()) + cls.get_config('wait_timeout')  # 超时时间
             return conn
 
         else:
@@ -101,10 +101,9 @@ class Connection:
     def _check_connection_timeout(cls):
         """检测超时，超时将重新连接（处于事务中时不会重连）"""
         conn = cls.__conn__()
-        if conn.autocommit_mode:       # 事务中跳过
-            return False
-        curr_time = int(time.time())
-        if curr_time - conn.__conn_start_time >= cls.get_config('wait_timeout'):
+        if conn.autocommit_mode is False:       # 事务中跳过，非自动提交就是在事务中
+            return
+        if conn.__expire_time <= int(time.time()):
             cls.connect(True)
 
     def ping(self):
@@ -114,8 +113,8 @@ class Connection:
     def start_trans(cls):
         """开启事务"""
         log.debug("start_trans")
-        cls._check_connection_timeout()       # TODO::获取游标时检测超时
-        cls.__conn__().autocommit(False)
+        cls._check_connection_timeout()     # TODO::获取游标时检测超时
+        cls.__conn__().autocommit(False)    # 关闭自动提交
 
     @classmethod
     def commit(cls):
