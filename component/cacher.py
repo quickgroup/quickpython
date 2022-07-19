@@ -174,12 +174,14 @@ class QPRedisCache(CacherBase):
     def ttl(self, key):
         return self.__conn.ttl(key)
 
-    def get(self, key, def_val=None, timeout=CacherBase.TIMEOUT):
+    def get(self, key, def_val=None, timeout=None):
         key = self.PREFIX + key
         try:
             content = self.__conn.get(key)
             if content is None:
                 if def_val is not None:
+                    if timeout is None:
+                        raise Exception("当def_val不为空时，请传入timeout超时时间")
                     def_val = def_val() if isinstance(def_val, types.FunctionType) else def_val
                     self.set(key, def_val, timeout)
                     return def_val
@@ -188,7 +190,7 @@ class QPRedisCache(CacherBase):
 
             content = base64.b64decode(str(content))
             val = pickle.loads(content)
-            logger.info("缓存时间剩余 {}, key={}".format(self.ttl(key), key))
+            # logger.info("缓存时间剩余 {}, key={}".format(self.ttl(key), key))
 
         except BaseException as e:
             logger.exception(e)

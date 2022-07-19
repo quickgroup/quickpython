@@ -22,17 +22,16 @@ class Session:
     expire = env.get('session.expire', 86400 * 7)
 
     def __init__(self, handler, session_name=None):
-        handler = handler
         self.name = self.name if session_name is None else session_name
         self.sess_id = handler.get_cookie(self.name)
         self.__data = None
-        if self.sess_id is None:
+        if self.sess_id is None or len(self.sess_id) <= 16:
             self.sess_id = self._gen_session_id()
             self.__data = {}
             cache.set(self._cache_name, {}, self.expire)
             handler.set_cookie(self.name, self.sess_id, max_age=self.expire)
         else:
-            self.__data = cache.get(self._cache_name, {})
+            self.__data = cache.get(self._cache_name, {}, self.expire)
 
     @classmethod
     def _gen_session_id(cls):
