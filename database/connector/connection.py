@@ -133,7 +133,7 @@ class Connection:
         conn.autocommit(True)
 
     @classmethod
-    def __cur_execute__(cls, cur, sql):
+    def _cur_execute(cls, cur, sql):
         try:
             log.debug(sql)
             return cur.execute(sql)
@@ -150,7 +150,7 @@ class Connection:
         conn = cls.__conn__()
         cur = cls.get_cursor()
         # count = cur.execute(sql)
-        count = cls.__cur_execute__(cur, sql)
+        count = cls._cur_execute(cur, sql)
         ret = cur.fetchone()
         return count, ret, cur.description
 
@@ -159,7 +159,7 @@ class Connection:
         conn = cls.__conn__()
         cur = cls.get_cursor()
         # count = cur.execute(sql)
-        count = cls.__cur_execute__(cur, sql)
+        count = cls._cur_execute(cur, sql)
         ret = cur.fetchall()
         return count, ret, cur.description
 
@@ -168,7 +168,7 @@ class Connection:
         conn = cls.__conn__()
         cur = cls.get_cursor()
         # count = cur.execute(sql)
-        count = cls.__cur_execute__(cur, sql)
+        count = cls._cur_execute(cur, sql)
         ret = cur.fetchone()
         ret_id = conn.insert_id()
         return count, ret, ret_id

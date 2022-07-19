@@ -25,6 +25,9 @@ class CacherBase:
     def _stime():
         return int(time.time())
 
+    def ttl(self, key):
+        return 0
+
     def get(self, key, def_val=None, timeout=TIMEOUT):
         pass
 
@@ -89,6 +92,13 @@ class QPFileCache(CacherBase):
     def _write_data(cls, data):
         cls.__DATA__ = data         # 本质还是要在内存中存在，存在多机部署共享问题
         cls._write_file(cls.CACHE_FILE, data)
+
+    def ttl(self, key, data=None):
+        if data is None:
+            data = self._load_data()
+        if key in data:
+            return data[key][TIME_K] - self._stime()
+        return super().ttl(key)
 
     def get(self, key, def_val=None, timeout=CacherBase.TIMEOUT):
         with FLock(self.LOCK_FILE):
@@ -161,19 +171,24 @@ class QPRedisCache(CacherBase):
         conn = Redis(connection_pool=pool)
         self.__conn = conn
 
+    def ttl(self, key):
+        return self.__conn.ttl(key)
+
     def get(self, key, def_val=None, timeout=CacherBase.TIMEOUT):
         key = self.PREFIX + key
         try:
             content = self.__conn.get(key)
-            if content is None and def_val is not None:
-                def_val = def_val() if isinstance(def_val, types.FunctionType) else def_val
-                self.set(key, def_val, timeout)
-                return def_val
-            elif content is None:
-                return def_val
+            if content is None:
+                if def_val is not None:
+                    def_val = def_val() if isinstance(def_val, types.FunctionType) else def_val
+                    self.set(key, def_val, timeout)
+                    return def_val
+                else:
+                    return def_val
 
-            content = base64.b64decode(content)
+            content = base64.b64decode(str(content))
             val = pickle.loads(content)
+            logger.info("缓存时间剩余 {}".format(self.ttl(key)))
 
         except BaseException as e:
             logger.exception(e)
@@ -188,7 +203,7 @@ class QPRedisCache(CacherBase):
 
         # 更新某值
         if timeout is True and self.__conn.get(key) is not None:
-            ttl = self.__conn.ttl(key)
+            ttl = self.ttl(key)
             ttl = CacherBase.TIMEOUT if ttl is None or ttl == -1 else ttl
             self.__conn.set(key, content, ttl)
         else:
