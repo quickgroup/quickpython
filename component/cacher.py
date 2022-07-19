@@ -188,7 +188,7 @@ class QPRedisCache(CacherBase):
 
             content = base64.b64decode(str(content))
             val = pickle.loads(content)
-            logger.info("缓存时间剩余 {}".format(self.ttl(key)))
+            logger.info("缓存时间剩余 {}, key={}".format(self.ttl(key), key))
 
         except BaseException as e:
             logger.exception(e)
