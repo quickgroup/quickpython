@@ -174,14 +174,16 @@ class QPRedisCache(CacherBase):
     def ttl(self, key):
         return self.__conn.ttl(key)
 
-    def get(self, key, def_val=None, timeout=None):
+    def get(self, key, def_val=None, timeout=CacherBase.TIMEOUT):
+        """
+        :param def_val: object 默认返回数据，可以是int、function
+        :param timeout: int 超时时间，当def_val不为空时，必须设置该值
+        """
         key = self.PREFIX + key
         try:
             content = self.__conn.get(key)
             if content is None:
                 if def_val is not None:
-                    if timeout is None:
-                        raise Exception("当def_val不为空时，请传入timeout超时时间")
                     def_val = def_val() if isinstance(def_val, types.FunctionType) else def_val
                     self.set(key, def_val, timeout)
                     return def_val
