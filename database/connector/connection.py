@@ -147,7 +147,6 @@ class Connection:
 
     @classmethod
     def execute(cls, sql):
-        conn = cls.__conn__()
         cur = cls.get_cursor()
         # count = cur.execute(sql)
         count = cls._cur_execute(cur, sql)
@@ -156,7 +155,6 @@ class Connection:
 
     @classmethod
     def execute_all(cls, sql):
-        conn = cls.__conn__()
         cur = cls.get_cursor()
         # count = cur.execute(sql)
         count = cls._cur_execute(cur, sql)
