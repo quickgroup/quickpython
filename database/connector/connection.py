@@ -32,6 +32,8 @@ class Connection:
             'password': None,
             'charset': "utf8mb4",
             'wait_timeout': 3600,
+            'echo': True,
+            'echo_words': 256,  # 最大字数打印
             'prefix': "",       # 表前缀
             'options': {},
         }
@@ -135,7 +137,7 @@ class Connection:
     @classmethod
     def _cur_execute(cls, cur, sql):
         try:
-            log.debug(sql)
+            log.debug(sql if len(sql) <= cls.get_config('echo_words', 256) else sql[0:256])
             return cur.execute(sql)
 
         except SystemExit as e:
