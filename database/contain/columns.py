@@ -43,39 +43,35 @@ class ColumnBase:
         if primary_key:
             self.nullable = False       # 主键禁止为空
 
-        self.default = kwargs.pop("default", None)
+        # self.default = kwargs.pop("default", None)
         self.insert_default = kwargs.pop("insert_default", None)
         self.update_default = kwargs.pop("update_default", None)
 
         self.comment = kwargs.pop("comment", None)  # 字段备注
         self.proxies = kwargs.pop("proxies", None)  # 字段前缀
 
-        self.value = kwargs.pop("value", self.default)   # 字段数据
+        self.value = kwargs.pop("value", None)   # 字段数据
 
     def has_insert_default(self):
         return (
-            self.default is not None
-            or self.insert_default is not None
+            self.insert_default is not None
             or self.update_default is not None
         )
 
     def has_update_default(self):
         return (
-            self.default is not None
-            or self.update_default is not None
+            self.update_default is not None
         )
 
     def __get_insert_default__(self):
-        val = self.default
-        if not_empty(val):
-            return val
-        if not_empty(self.insert_default):
+        val = None
+        if self.insert_default is not None:
             if isfunction(self.insert_default):
                 val = self.insert_default()
             else:
                 val = self.insert_default
 
-        if empty(val) and not_empty(self.update_default):
+        if val is None and self.update_default is not None:
             if isfunction(self.update_default):
                 val = self.update_default()
             else:
@@ -83,8 +79,8 @@ class ColumnBase:
         return val
 
     def __get_update_default__(self):
-        val = self.default
-        if empty(val) and not_empty(self.update_default):
+        val = None
+        if val is None and self.update_default is not None:
             if isfunction(self.update_default):
                 val = self.update_default()
             else:
