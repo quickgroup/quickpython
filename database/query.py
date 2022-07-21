@@ -67,7 +67,7 @@ class QuerySet(object):
         self.__having = []
         self.__distinct = False
         self.__for_update = None
-        self.__model__ = None
+        self.__fetch_sql__ = False
         self.__options = {
             'multi': {},
             'where': {},
@@ -82,10 +82,6 @@ class QuerySet(object):
 
     def __close(self):
         self.connect().close()
-
-    @property
-    def __self(self):
-        return self if self.__model__ is None else self.__model__
 
     @property
     def __table__(self):
@@ -322,12 +318,14 @@ class QuerySet(object):
 
     def build_sql(self):
         column = self.__fields
-
         if column == '*':
             column = self.__get_column__(str)
-
         sql = self.__com_query_sql()
         return sql
+
+    def fetch_sql(self):
+        self.__fetch_sql__ = True
+        return self
 
     def __get_field(self, table=None):
         column = self.__fields
@@ -388,7 +386,7 @@ class QuerySet(object):
             return 0
 
         sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
-        return self.connect().execute(sql)[0]
+        return sql if self.__fetch_sql__ else self.connect().execute(sql)[0]
 
     def insert_get_id(self, data):
         if isinstance(data, dict) is False:
