@@ -57,7 +57,7 @@ def typeof(variate):
 
 class QuerySet(object):
 
-    def __init__(self):
+    def __init__(self, connection=None):
         self.__map = {}
         self.__table = ''
         self.__fields = []
@@ -72,16 +72,19 @@ class QuerySet(object):
             'multi': {},
             'where': {},
         }
-        self.connection = self.connect()
+        self.connection = self.connect() if connection is None else connection
         self.prefix = self.connection.get_config("prefix", '')
-        self.__database = self.connection.get_config('database')
+        self.__database = self.connection.get_config('database', '')
 
     @staticmethod
     def connect():
         return Connection.connect()
 
+    def _conn(self):
+        return self.connection.connect()
+
     def __close(self):
-        self.connect().close()
+        self._conn().close()
 
     @property
     def __table__(self):
@@ -343,7 +346,9 @@ class QuerySet(object):
         if sql is None or len(sql) == 0:
             return None
 
-        count, result, field_info = self.connect().execute_all(sql)
+        if self.__fetch_sql__:
+            return sql
+        count, result, field_info = self._conn().execute_all(sql)
         return None if empty(result) else result[0]
 
     def select(self):
@@ -351,14 +356,15 @@ class QuerySet(object):
         if sql is None:
             return None
 
-        count, result, field_info = self.connect().execute_all(sql)
-        return result
+        if self.__fetch_sql__:
+            return sql
+        return self._conn().execute_all(sql)[1]
 
     def value(self, field):
         _fields = self.__fields
         self.__fields = [field]
         sql = self.__com_query_sql()
-        count, result, _ = self.connect().execute(sql)
+        count, result, _ = self._conn().execute(sql)
         self.__fields = _fields
         return 0 if result is None else result[field]
 
@@ -386,7 +392,9 @@ class QuerySet(object):
             return 0
 
         sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
-        return sql if self.__fetch_sql__ else self.connect().execute(sql)[0]
+        if self.__fetch_sql__:
+            return sql
+        return self._conn().execute(sql)[0]
 
     def insert_get_id(self, data):
         if isinstance(data, dict) is False:
@@ -401,9 +409,11 @@ class QuerySet(object):
             return 0
 
         sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
+        if self.__fetch_sql__:
+            return sql
 
         # 执行
-        count, ret, pk = self.connect().execute_get_id(sql)
+        count, ret, pk = self._conn().execute_get_id(sql)
         # logger.debug("pk={}".format(pk))
         return pk
 
@@ -432,8 +442,9 @@ class QuerySet(object):
 
         # 表名、更新的字段、限制条件
         sql = "UPDATE {} SET {} {}".format(self.__table_name_sql__(), ", ".join(fields), where_str)
-        count, ret, _ = self.connect().execute(sql)
-        return count
+        if self.__fetch_sql__:
+            return sql
+        return self._conn().execute(sql)[0]   # count, ret, _
 
     def set_option(self, key, val):
         return self.update({key: val})
@@ -444,8 +455,9 @@ class QuerySet(object):
             raise Exception("禁止不使用 where 删除数据")
 
         sql = "DELETE FROM {} {}".format(self.__table_name_sql__(), where_str)
-        count, result, _ = self.connect().execute(sql)
-        return count
+        if self.__fetch_sql__:
+            return sql
+        return self._conn().execute(sql)[0]
 
     def set_inc(self, key, step=1):
         return self.update({key: key + '+' + str(step)})
@@ -454,7 +466,7 @@ class QuerySet(object):
         return self.update({key: key + '-' + str(step)})
 
     def query(self, sql):
-        count, ret, _ = self.connect().execute(sql)
+        count, ret, _ = self._conn().execute(sql)
         return ret
 
     @staticmethod
@@ -490,7 +502,7 @@ class QuerySet(object):
             count, list_data, field_info = cache_data
         else:
             sql = "SHOW FULL COLUMNS FROM `{}`".format(table)
-            count, list_data, field_info = self.connect().execute_all(sql)
+            count, list_data, field_info = self._conn().execute_all(sql)
             self.__set_cache(ck, (count, list_data, field_info))
 
         if full_name:
@@ -562,15 +574,15 @@ class Db(QuerySet):
 class Transaction:
 
     def __init__(self):
-        self.query_set = QuerySet()
+        self.conn = QuerySet().connection
 
     def __enter__(self):
-        self.query_set.start_trans()
+        self.conn.start_trans()
 
     def __exit__(self, exc_type, value, traceback):
         if exc_type is None:
-            self.query_set.commit()
+            self.conn.commit()
             return True
         else:
-            self.query_set.rollback()
+            self.conn.rollback()
             return False

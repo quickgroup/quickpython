@@ -152,16 +152,16 @@ class Connection:
         cur = cls.get_cursor()
         # count = cur.execute(sql)
         count = cls._cur_execute(cur, sql)
-        ret = cur.fetchone()
-        return count, ret, cur.description
+        row = cur.fetchone()
+        return count, row, cur.description
 
     @classmethod
     def execute_all(cls, sql):
         cur = cls.get_cursor()
         # count = cur.execute(sql)
         count = cls._cur_execute(cur, sql)
-        ret = cur.fetchall()
-        return count, ret, cur.description
+        rows = cur.fetchall()
+        return count, rows, cur.description
 
     @classmethod
     def execute_get_id(cls, sql):
@@ -169,9 +169,8 @@ class Connection:
         cur = cls.get_cursor()
         # count = cur.execute(sql)
         count = cls._cur_execute(cur, sql)
-        ret = cur.fetchone()
-        ret_id = conn.insert_id()
-        return count, ret, ret_id
+        row = cur.fetchone()
+        return count, row, conn.insert_id()
 
     @classmethod
     def execute_find(cls, sql):

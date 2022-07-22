@@ -319,6 +319,8 @@ class Model:
 
     def __getattr__(self, name):
         # 在model上未找到的属性，到
+        if isinstance(name, str) is False:
+            raise Exception("错误的属性名：{}".format(name))
         if hasattr(self.__query__, name):       # 如果query上存在该方法就返回
 
             def proxy_method(*args, **kwargs):
