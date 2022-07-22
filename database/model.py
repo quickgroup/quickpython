@@ -32,7 +32,7 @@ class Model:
         self.__modified_fields__ = []  # 模型数据是否修改，用于更新
         self.__relation__ = None    # 关联模型属性
         self.__withs__ = []         # 预加载属性
-        self._load_field()          # 初始化字段信息
+        self._load_class()          # 初始类信息：字段等
         # 对象数据初始化
         for key in self.__attrs__:
             if key in kwargs:
@@ -40,10 +40,9 @@ class Model:
             else:
                 cls_attr = object.__getattribute__(self.__class__, key)
                 setattr(self, key, copy.copy(cls_attr))
-        # 查询器
         self.__query__ = QuerySet().table(self.__table__)   # type:QuerySet
 
-    def _load_field(self):
+    def _load_class(self):
         self.__class__._get_cls_fields()
 
     @property
@@ -60,7 +59,6 @@ class Model:
         for name in cls_dict:
             if str(name).find("__") == 0:
                 continue
-            # obj = getattr(cls, name)
             obj = cls.__getattribute__(cls, name, True)
             if isfunction(obj):
                 continue
@@ -300,10 +298,11 @@ class Model:
         return self.__get_pk_val__() is not None
 
     def __load_data__(self, data: dict):
-        if data is not None:
-            for key, val in data.items():
-                if key in self.__attrs__:
-                    self.__setattr__(key, val)
+        if empty(data):
+            return
+        for key, val in data.items():
+            if key in self.__attrs__:
+                self.__setattr__(key, val)
 
     def __setattr__(self, name: str, value, attr_direct=False):
         # logger.debug("__setattr__ {}:{}".format(id(self), key))
