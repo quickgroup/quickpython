@@ -444,6 +444,7 @@ class QuerySet(object):
         sql = "UPDATE {} SET {} {}".format(self.__table_name_sql__(), ", ".join(fields), where_str)
         if self.__fetch_sql__:
             return sql
+
         return self._conn().execute(sql)[0]   # count, ret, _
 
     def set_option(self, key, val):

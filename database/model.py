@@ -18,6 +18,7 @@ class Model:
     __table_pk__ = None     # type:ColumnBase
     __table_args__ = None   # 表加参数
     __table_fields__ = None # 模型的字段列表
+    __clone_obj__ = None    # 待克隆对象
     __attrs__ = None        # 模型显示的属性
     __soft_delete__ = None  # type:ColumnBase
     __relation__ = None     # 被关联信息
@@ -30,24 +31,27 @@ class Model:
     def __init__(self, *args, **kwargs):
         self._is_new = False  # 是否是新增
         self.__modified_fields__ = []  # 模型数据是否修改，用于更新
-        self.__relation__ = None    # 关联模型属性
         self.__withs__ = []         # 预加载属性
-        self._load_class()          # 初始类信息：字段等
-        # 对象数据初始化
+        self.__class__._load_class()          # 初始类信息：字段等
+        # 待克隆对象
+        # if self.__clone_obj__ is None:
+        #     self.__clone_obj__ = self
+        #     for key in self.__attrs__:
+        #         cls_attr = object.__getattribute__(self.__class__, key)
+        #         setattr(self, key, copy.copy(cls_attr))
+        # 对象数据初始化（默认值等
         for key in self.__attrs__:
             if key in kwargs:
                 setattr(self, key, kwargs.pop(key))
-            else:
-                cls_attr = object.__getattribute__(self.__class__, key)
-                setattr(self, key, copy.copy(cls_attr))
-        self.__query__ = QuerySet().table(self.__table__)   # type:QuerySet
-
-    def _load_class(self):
-        self.__class__._get_cls_fields()
+        # self.__query__ = QuerySet().table(self.__table__)   # type:QuerySet
 
     @property
     def name(self):
         return self.__class__.__name__
+
+    @classmethod
+    def _load_class(cls):
+        cls._get_cls_fields()
 
     @classmethod
     def _get_cls_fields(cls):
@@ -383,14 +387,14 @@ class Model:
 
     def __dict__(self):
         data = {}
-        withs_name = [it.name for it in self.__withs__]
-        for k, c in self.__attrs__.items():     # 只输出指定字段
-            if len(withs_name) > 0 and isinstance(c, RelationModel):  # 关联对象数据
-                if k in withs_name:
-                    data[k] = getattr(self, k)
-            else:
-                data[k] = getattr(self, k)
 
+        for k, c in self.__attrs__.items():
+            data[k] = getattr(self, k)
+
+        # def func(k, c):
+        #     print('读取值')
+        #     data[k] = getattr(self, k)
+        # map(func, self.__attrs__.items())
         return data
 
     def __getstate__(self):
