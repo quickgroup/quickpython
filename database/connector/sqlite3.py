@@ -2,8 +2,7 @@
 sqlite3 连接管理
 """
 import sqlite3
-import time, threading, logging
-from quickpython.database.contain.func import *
+import logging
 from .base import Connector
 
 log = logging.getLogger(__name__)
@@ -19,10 +18,16 @@ class Sqlite3Connector(Connector):
             conn = sqlite3.connect(database=self.get_config('database'),
                                    uri=self.get_config('hostname'),
                                    isolation_level=None)
+            conn.execute("PRAGMA synchronous=OFF")   # 关闭同步
+            conn.row_factory = Sqlite3Connector.dict_factory
             self.connect_after(conn=conn)
             return self
         else:
             raise Exception("不支持的数据库引擎：{}".format(self.get_config('engine')))
+
+    @staticmethod
+    def dict_factory(cursor: sqlite3.Cursor, row):
+        return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
 
     def autocommit(self, x):
         self._autocommit = x

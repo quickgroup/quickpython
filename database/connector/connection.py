@@ -34,6 +34,10 @@ class Connection:
         return settings.DATABASES.get(name)
 
     @staticmethod
+    def __cache_name__(name):
+        return '__db_{}_connection'.format(name)
+
+    @staticmethod
     def __find_engine(config) -> Connector.__class__:
         name = config.get('engine')
         if name not in Connection.ENGINES:
@@ -41,19 +45,18 @@ class Connection:
         return Connection.ENGINES.get(name)
 
     @staticmethod
-    def connect(name=None, config=None, re_connect=False) -> Connector:
-        """
-        获取连接，已连接直接返回
-        """
+    def connect(name, config=None, re_connect=False) -> Connector:
+        """获取连接，已连接直接返回"""
         if name is None and config is not None and 'name' in config:
             name = config['name']
-        elif name is None:
+        elif empty(name):
             name = 'default'
 
-        key_name = '__db_' + name
+        cache_name = Connection.__cache_name__(name)
         config = Connection.__find_config(name, config)
-        obj = local_get(Connection._local, key_name)
+        obj = local_get(Connection._local, cache_name)
         if obj is None or re_connect:
+            log.info("新连接 {}".format(cache_name))
             engine = Connection.__find_engine(config)
-            local_set(Connection._local, key_name, engine(name, config=config).connect())
-        return local_get(Connection._local, key_name)
+            local_set(Connection._local, cache_name, engine(name, config=config).connect())
+        return local_get(Connection._local, cache_name)

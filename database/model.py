@@ -96,9 +96,9 @@ class Model:
                     if empty(val):
                         return self
                     it_arr = it.split('__')
-                    self.__query__ = self.__query__.where({it_arr[0]: [it_arr[1], val]})
+                    self.__query__.where({it_arr[0]: [it_arr[1], val]})
                 else:
-                    self.__query__ = self.__query__.where(it, "=", val)
+                    self.__query__.where(it, "=", val)
             return self
         elif len(args) > 0 and isinstance(args[0], ColumnCmp):
             where = args[0].__dict__()
@@ -120,7 +120,7 @@ class Model:
         if len(self.__withs__) > 0 and len(args) >= 2 and where['key'].find(".") == -1:
             where['key'] = self.__table__ + "." + where['key']
 
-        self.__query__ = self.__query__.where(where['key'], where['type'], where['val'])
+        self.__query__.where(where['key'], where['type'], where['val'])
         return self
 
     def get(self, *args, **kwargs):
@@ -331,7 +331,6 @@ class Model:
                 ret = method(*args, **kwargs)
                 # print("代理方法-执行结果", method, ret)
                 if isinstance(ret, QuerySet):
-                    self.__query__ = ret
                     return self
                 return ret
 

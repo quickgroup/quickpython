@@ -55,10 +55,6 @@ class Connector:
             return self.config['options'][key]
         return def_val
 
-    def __cache_key__(self):
-        """缓存名称"""
-        return '__db_{}_connection'.format(self.name)
-
     @abc.abstractmethod
     def connect(self):
         """子类实现具体连接方法"""
@@ -120,7 +116,7 @@ class Connector:
             self.close()
             raise e
         except BaseException as e:
-            log.exception("SQL: {}".format(sql))
+            log.exception("{}({}) Exception SQL:{}".format(self.name, self.get_config('engine'), sql))
             raise e
 
     def execute(self, sql):
