@@ -26,7 +26,7 @@ class Model:
     __origin__ = {}         # 原始数据（数据查询
     __data__ = {}           # 设置的数据
     __withs__ = []          # 预加载属性
-    __query__ = QuerySet()  # type:QuerySet
+    # __query__ = None        # type: QuerySet
 
     def __init__(self, *args, **kwargs):
         self._is_new = False  # 是否是新增
@@ -37,11 +37,17 @@ class Model:
         for key in self.__attrs__:
             if key in kwargs:
                 setattr(self, key, kwargs.pop(key))
-        self.__query__ = QuerySet().table(self.__table__)   # type:QuerySet
+        self.__query = None   # type: QuerySet
 
     @property
     def name(self):
         return self.__class__.__name__
+
+    @property
+    def __query__(self):
+        if self.__query is None:
+            self.__query = QuerySet().table(self.__table__)   # type:QuerySet
+        return self.__query
 
     @classmethod
     def _load_class(cls):
