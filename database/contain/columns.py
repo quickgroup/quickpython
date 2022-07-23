@@ -4,9 +4,9 @@
 import time
 
 from ..contain.func import *
-from .. import setttings
+from .. import settings
 
-options = setttings.DATABASES['default']['options']
+options = settings.DATABASES['default']['options']
 
 
 class ColumnCmp:

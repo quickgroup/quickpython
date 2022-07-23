@@ -50,6 +50,7 @@ class RelationModel:
     def bind_parent_where(self):
         self.local_key_val = getattr(self.parent, self.local_key)
         if self.local_key_val is None:
+            raise Exception("父模型关联属性值为空")
             logger.warning("父模型关联属性值为空 {}".format(self.local_key))
 
         self.model = self.model_cls()

@@ -33,17 +33,11 @@ class Model:
         self.__modified_fields__ = []  # 模型数据是否修改，用于更新
         self.__withs__ = []         # 预加载属性
         self.__class__._load_class()          # 初始类信息：字段等
-        # 待克隆对象
-        # if self.__clone_obj__ is None:
-        #     self.__clone_obj__ = self
-        #     for key in self.__attrs__:
-        #         cls_attr = object.__getattribute__(self.__class__, key)
-        #         setattr(self, key, copy.copy(cls_attr))
-        # 对象数据初始化（默认值等
+        # 对象数据赋值
         for key in self.__attrs__:
             if key in kwargs:
                 setattr(self, key, kwargs.pop(key))
-        # self.__query__ = QuerySet().table(self.__table__)   # type:QuerySet
+        self.__query__ = QuerySet().table(self.__table__)   # type:QuerySet
 
     @property
     def name(self):
@@ -359,7 +353,8 @@ class Model:
         if issubclass(attr.__class__, RelationModel):
             # logger.debug("关联模型属性")
             attr.load_model_cls(self)
-            attr.bind_parent_where()
+            if getattr(self, attr.local_key) is not None:
+                attr.bind_parent_where()
             object.__setattr__(self, attr_name, attr.model)
             # logger.debug("关联模型属性 返回新的模型={}".format(id(attr.model)))
             # logger.debug("关联模型属性 返回新的模型={}".format(type(attr.model)))
@@ -388,13 +383,10 @@ class Model:
     def __dict__(self):
         data = {}
 
-        for k, c in self.__attrs__.items():
+        def func(it):
+            k, c = it
             data[k] = getattr(self, k)
-
-        # def func(k, c):
-        #     print('读取值')
-        #     data[k] = getattr(self, k)
-        # map(func, self.__attrs__.items())
+        list(map(func, self.__attrs__.items()))
         return data
 
     def __getstate__(self):

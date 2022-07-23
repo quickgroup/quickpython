@@ -6,11 +6,11 @@ import time, re, pymysql
 from .connector.connection import Connection
 from .contain.func import *
 from .contain.extend import *
-from . import setttings
+from . import settings
 from .log import get_logger
 logger = get_logger()
 
-options = setttings.DATABASES['default']['options']
+options = settings.DATABASES['default']['options']
 
 
 def format_field(name):
