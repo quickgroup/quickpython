@@ -16,7 +16,7 @@ class Sqlite3Connector(Connector):
         """创建新连接"""
         if self.get_config('engine') == 'sqlite3':
             conn = sqlite3.connect(database=self.get_config('database'),
-                                   uri=self.get_config('hostname'),
+                                   uri=self.get_config('uri', None),
                                    isolation_level=None)
             conn.execute("PRAGMA synchronous=OFF")   # 关闭同步
             conn.row_factory = Sqlite3Connector.dict_factory

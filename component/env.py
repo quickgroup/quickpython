@@ -8,6 +8,7 @@ import os, logging
 class Env:
 
     DATETIME_NOW = '__ENV_DATETIME_NOW__'
+    DATETIME_TIME_NOW = '__ENV_DATETIME_TIME_NOW__'
 
     def __init__(self, env_path=".env", encoding="utf-8"):
         self.env_path = env_path

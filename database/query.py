@@ -11,6 +11,7 @@ from .log import get_logger
 logger = get_logger()
 
 options = settings.DATABASES['default']['options']
+def_name = 'default'
 
 
 def format_field(name):
@@ -53,6 +54,23 @@ def typeof(variate):
     elif isinstance(variate, set):
         mold = "set"
     return mold
+
+
+class Transaction:
+
+    def __init__(self, name='default'):
+        self.conn = Connection.connect(name)
+
+    def __enter__(self):
+        self.conn.start_trans()
+
+    def __exit__(self, exc_type, value, traceback):
+        if exc_type is None:
+            self.conn.commit()
+            return True
+        else:
+            self.conn.rollback()
+            return False
 
 
 class QuerySet(object):
@@ -470,17 +488,24 @@ class QuerySet(object):
         count, ret, _ = self.__conn__().execute(sql)
         return ret
 
+    """
+    事务操作
+    """
     @staticmethod
     def start_trans():
-        Connection.connect().start_trans()
+        Connection.connect(def_name).start_trans()
 
     @staticmethod
     def commit():
-        Connection.connect().commit()
+        Connection.connect(def_name).commit()
 
     @staticmethod
     def rollback():
-        Connection.connect().rollback()
+        Connection.connect(def_name).rollback()
+
+    @staticmethod
+    def transaction(name=def_name):
+        return Transaction(name)
 
     def select_for_update(self, sql="FOR UPDATE"):
         self.__for_update = sql
@@ -566,24 +591,3 @@ class QuerySet(object):
         }
         self.__column_cache__[ck] = item
         return item['data']
-
-
-class Db(QuerySet):
-    """"""
-
-
-class Transaction:
-
-    def __init__(self, name='default'):
-        self.conn = Connection.connect(name)
-
-    def __enter__(self):
-        self.conn.start_trans()
-
-    def __exit__(self, exc_type, value, traceback):
-        if exc_type is None:
-            self.conn.commit()
-            return True
-        else:
-            self.conn.rollback()
-            return False

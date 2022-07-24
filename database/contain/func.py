@@ -31,6 +31,11 @@ def empty_val(obj, def_val):
     return None if empty(obj) else def_val
 
 
+def halt(condition, msg):
+    if condition:
+        raise Exception(msg)
+
+
 def load_cls(cls_path, **kwargs):
     model_path, cls_name = cls_path.rsplit(".", 1)
     module = importlib.import_module(model_path)

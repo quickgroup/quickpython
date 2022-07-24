@@ -14,6 +14,7 @@ VAL_K = 'v'
 class CacherBase:
 
     TIMEOUT = 1800
+    TIMEOUT_HOUR = 3600
     __DATA__ = {}
     # __LOCK__ = threading.Lock()
 

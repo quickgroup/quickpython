@@ -35,6 +35,7 @@ class Connector:
     def __init__(self, name='default', config=None):
         self.name = name
         self.config = self.load_config(config)
+        self.log = log
         self.__conn = None      # 数据库连接，子类不能直接访问
         self._cursor = None    # 连接游标
         self._thr_id = get_thr_id()
@@ -85,6 +86,10 @@ class Connector:
     def ping(self):
         """数据库PING"""
 
+    def on_echo(self, x):
+        self.config['echo'] = x
+        self.log.setLevel(logging.DEBUG if x else logging.INFO)
+
     @abc.abstractmethod
     def autocommit(self, x):
         """开启事务"""
@@ -107,8 +112,9 @@ class Connector:
         self.__conn.rollback()
         self.autocommit(True)
 
-    def _cur_execute(self, cur, sql):
+    def _cur_execute(self, cur, sql: str):
         try:
+            sql = sql.strip()
             log.debug(self.get_config('engine') + ": " + (sql if len(sql) <= 1024 else sql[0:1024]))
             return cur.execute(sql)
 
@@ -116,7 +122,7 @@ class Connector:
             self.close()
             raise e
         except BaseException as e:
-            log.exception("{}({}) Exception SQL:{}".format(self.name, self.get_config('engine'), sql))
+            log.exception("{}({}){} Exception SQL:{}".format(self.name, self.get_config('engine'), self.__conn, sql))
             raise e
 
     def execute(self, sql):
