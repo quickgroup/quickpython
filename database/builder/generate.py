@@ -1,8 +1,7 @@
 """
 model demo
 """
-import logging
-from libs.utils import Utils
+import logging, re
 from quickpython.database.contain.columns import *
 from quickpython.database.connector.connection import Connection
 from quickpython.component.env import env
@@ -69,7 +68,7 @@ class GenerateDemo:
             field_arr.append(item)
 
         model_name = table_name if prefix == '' else table_name.replace(prefix, '')
-        model_name = Utils.str_to_hump(model_name)
+        model_name = self.str_to_hump(model_name)
         table_name = table_name if prefix == '' else table_name.replace(prefix, '')
 
         t_ = "    "
@@ -83,9 +82,13 @@ class GenerateDemo:
             return r'"""{}"""'.format(text)
         return r'"{}"'.format(text)
 
+    @staticmethod
+    def str_to_hump(text, first_upper=True):
+        ret = re.sub(r'(_[a-z])', lambda x: x.group(1)[1].upper(), text)
+        if first_upper:
+            ret = ret[0].upper() + ret[1:]
+        return ret
+
 
 if __name__ == '__main__':
-    try:
-        GenerateDemo().call()
-    except:
-        Utils.print_exc()
+    GenerateDemo().call()

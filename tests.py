@@ -4,14 +4,12 @@
 import logging
 import time
 
-from libs.utils import BaseClass
 from quickpython.server.processor import ProcessorHandler
-from quickpython.boot import Boot
 
 logger = logging.getLogger(__name__)
 
 
-class Tests(BaseClass):
+class Tests:
 
     def call(self, argv):
         if hasattr(self, argv[0]) is False:
@@ -41,10 +39,6 @@ class Tests(BaseClass):
     def test_102(self):
         """测试session读写功能"""
         from quickpython.component import Session
-
-    def boot(self):
-        """测试session读写功能"""
-        Boot.cmd()
 
     def cache(self):
         """测试cache"""

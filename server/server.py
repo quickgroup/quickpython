@@ -1,22 +1,23 @@
 import sys, signal, logging, datetime
 import tornado.ioloop
 import tornado.web
-from quickpython.config import Config
+from config import Config       # 应用需要自己有一个config文件，或者包含且继承quickpython.config
+from quickpython.component import hooker
 from .settings import SETTINGS, ROUTES
+from .command import CommandManager, EventManager
 
 
 class Core:
     log = logging.getLogger(__name__)
 
     @classmethod
-    def signal_init(cls):
-        """监听退出，不能再bind之前调用"""
+    def _web_signal_init(cls):
+        """web环境监听退出，不能再bind之前调用"""
 
         def signin_exit(signum, frame):
-            cls.log.info("进程停止")
+            cls.log.debug("进程停止")
             tornado.ioloop.IOLoop.instance().stop()
-            from libs.thread import ThreadManager
-            ThreadManager.exit_abort()
+            cls._app_stop()
             cls.log.info("进程停止 完成")
 
         # signal.signal(signal.SIGQUIT, signin_exit)
@@ -30,18 +31,53 @@ class Core:
         set_ping(tornado.ioloop.IOLoop.instance(), datetime.timedelta(seconds=1))
 
     @classmethod
+    def _cmd_signal_init(cls):
+        """cmd模型信号处理"""
+        def my_handler(signum, frame):              # 信号处理函数
+            cls.log.debug("App stop")
+            cls._app_stop()
+            cls.log.info("App stop complete.")
+
+        signal.signal(signal.SIGINT, my_handler)    # 设置相应信号处理的handler
+        # signal.signal(signal.SIGHUP, my_handler)
+        signal.signal(signal.SIGTERM, my_handler)
+
+    @classmethod
+    def _app_stop(cls):
+        hooker.send(hooker.EXIT)
+        hooker.stop()
+
+    @classmethod
+    def start(cls, argv):
+        mode = argv[0] if len(argv) > 0 else None
+        if mode == "cmd":
+            cls.cmd(argv)
+        elif mode == "web":
+            cls.web()
+        else:
+            raise Exception("缺少启动模式参数")
+
+    @classmethod
     def init(cls, mode):
         Config.init(mode)
+        hooker.start()
+        EventManager.init()
         logging.getLogger("tornado.access").setLevel(logging.ERROR)
 
     @classmethod
-    def cmd(cls):
+    def cmd(cls, argv):
         """cmd环境"""
         cls.init(Config.MODE_CMD)
-        cls.signal_init()
+        cls._cmd_signal_init()
+        cls.log.info("App cmd start")
+        # 加载命令行程序
+        CommandManager.call(argv)
+        # 应用结束
+        hooker.send(hooker.EXIT)
+        hooker.stop()
 
     @classmethod
-    def start(cls):
+    def web(cls):
         """启动web环境"""
         cls.init(Config.MODE_WEB)
         # 配置
@@ -61,7 +97,7 @@ class Core:
             server.bind(SETTINGS['port'])
             server.start(0)     # 当参数小于等于０时，则根据当前机器的cpu核数来创建子进程，大于１时直接根据指定参数创建子进程
 
-        cls.signal_init()
+        cls._web_signal_init()
         cls.log.info("WEB start complete, port={}".format(SETTINGS['port']))
         tornado.ioloop.IOLoop.instance().start()
         # 关闭

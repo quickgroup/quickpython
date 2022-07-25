@@ -1,12 +1,15 @@
 """
 query_set
 """
-import logging
-from libs.utils import Utils
+import logging, time
 from quickpython.database.query import QuerySet, Db
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+def mtime():
+    return int(time.time() * 1000)
 
 
 class QuerySetDemo:
@@ -23,13 +26,13 @@ class QuerySetDemo:
         self.find()
 
     def insert(self):
-        mtime = Utils.mtime()
+        stime = mtime()
         QuerySet().table("user").insert({'username': "query_1"})
         QuerySet().table("user").insert({'username': "query_2"})
         QuerySet().table("user").insert({'username': "query_3"})
         QuerySet().table("user").insert({'username': "query_4"})
         QuerySet().table("user").insert({'username': "query_5"})
-        logger.info("新增耗时 {}ms".format(Utils.mtime() - mtime))
+        logger.info("新增耗时 {}ms".format(mtime() - stime))
 
     def delete(self):
         user_2 = QuerySet().table("user").where('username', 'query_2').find()

@@ -1,5 +1,4 @@
 import logging
-from libs.utils import Utils
 from quickpython.server.exception import *
 from quickpython.component.session import Session
 from quickpython.component.result import Result
@@ -17,7 +16,6 @@ class Controller:
         self.params = {}            # 请求数据
         self.__assign_data = {        # 默认注入参数
             'version': self._version,
-            'Utils': Utils,
         }
 
     @property

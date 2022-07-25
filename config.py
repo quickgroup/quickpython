@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 ROOT_PATH = str(os.getcwd()).replace('\\', '/')
+APP_PATH = str(os.getcwd()).replace('\\', '/') + '/app'
 CACHE_PATH = ROOT_PATH + '/cache'       # cache目录
 LOG_DIR = ROOT_PATH + '/cache/logs'   # 日志目录
 DATA_PATH = ROOT_PATH + '/data'         # 数据目录
@@ -16,6 +17,7 @@ PUBLIC_PATH = ROOT_PATH + '/public'     # 资源目录
 UPLOADS_PATH = ROOT_PATH + '/public/uploads'    # 上传目录
 
 env.set('ROOT_PATH', ROOT_PATH)
+env.set('APP_PATH', APP_PATH)
 env.set('CACHE_PATH', CACHE_PATH)
 env.set('LOG_DIR', LOG_DIR)
 env.set('DATA_PATH', DATA_PATH)
@@ -35,6 +37,7 @@ class Config:
 
     # 目录
     ROOT_PATH = ROOT_PATH
+    APP_PATH = APP_PATH
     CACHE_PATH = CACHE_PATH
     LOG_DIR = LOG_DIR
     DATA_PATH = DATA_PATH

@@ -1,10 +1,9 @@
 """
 model demo
 """
-import logging, threading
+import logging, threading, time
 from app.common.models import *
 from quickpython.database import *
-from libs.utils import Utils
 
 logger = logging.getLogger(__name__)
 
