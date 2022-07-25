@@ -36,9 +36,9 @@ class Core:
 
     @classmethod
     def cmd(cls):
+        """cmd环境"""
         cls.init(Config.MODE_CMD)
         cls.signal_init()
-        cls.log.info("##########   Command mode   ##########")
 
     @classmethod
     def start(cls):

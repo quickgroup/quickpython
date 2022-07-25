@@ -213,7 +213,6 @@ class DemoModel:
 
         except BaseException as e:
             logger.exception("出现异常")
-            logger.exception(e)
             user.save({'password': Utils.mtime()})
 
         logger.exception("完成测试")
