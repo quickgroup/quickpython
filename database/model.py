@@ -385,13 +385,18 @@ class Model:
     # def __repr__(self):
     #     return self.__str__()
 
-    def __dict__(self):
+    def __dict__(self, fields=None):
         data = {}
-
-        def func(it):
-            k, c = it
-            data[k] = getattr(self, k)
-        list(map(func, self.__attrs__.items()))
+        if fields is not None:
+            fields = fields.split(",") if isinstance(fields, str) else fields
+            def func(k):
+                data[k] = getattr(self, k)
+        else:
+            fields = self.__attrs__.items()
+            def func(it):
+                k, c = it
+                data[k] = getattr(self, k)
+        list(map(func, fields))
         return data
 
     def __getstate__(self):
@@ -401,10 +406,10 @@ class Model:
         self.__init__()
         self.__load_data__(state)
 
-    def to_dict(self):
+    def to_dict(self, fields=None):
         if isinstance(self, list):
-            return [it.__dict__() for it in self]
-        return self.__dict__()
+            return [it.__dict__(fields) for it in self]
+        return self.__dict__(fields)
 
     """
     预加载方法

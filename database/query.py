@@ -78,7 +78,7 @@ class QuerySet(object):
     def __init__(self, connection=None):
         self.__map = {}
         self.__table = ''
-        self.__fields = []
+        self.__fields__ = []
         self.__where = {}
         self.__alias = ''
         self.__join = []
@@ -214,7 +214,7 @@ class QuerySet(object):
                 val = "{}.{}{}".format(prefix, val, ('' if alias is None else " AS {}{}".format(alias, val)))
                 field[idx] = val
 
-        self.__fields.extend(field)
+        self.__fields__.extend(field)
         return self
 
     def distinct(self, is_true=True):
@@ -303,7 +303,7 @@ class QuerySet(object):
         if self.__distinct:
             sa.append("distinct")
 
-        fields = ','.join(self.__fields)
+        fields = ','.join(self.__fields__)
         sa.append("{}".format(fields if len(fields) > 0 else '*'))
         sa.append("FROM {}".format(self.__table_name_sql__()))
         if not_empty(self.__alias):
@@ -338,7 +338,7 @@ class QuerySet(object):
         return " ".join(sa)
 
     def build_sql(self):
-        column = self.__fields
+        column = self.__fields__
         if column == '*':
             column = self.__get_column__(str)
         sql = self.__com_query_sql()
@@ -349,7 +349,7 @@ class QuerySet(object):
         return self
 
     def __get_field(self, table=None):
-        column = self.__fields
+        column = self.__fields__
         if '*' in column:
             column = self.__get_column__(str, table=table)
 
@@ -379,11 +379,11 @@ class QuerySet(object):
         return self.__conn__().execute_all(sql)[1]
 
     def value(self, field):
-        _fields = self.__fields
-        self.__fields = [field]
+        _fields = self.__fields__
+        self.__fields__ = [field]
         sql = self.__com_query_sql()
         count, result, _ = self.__conn__().execute(sql)
-        self.__fields = _fields
+        self.__fields__ = _fields
         return 0 if result is None else result[field]
 
     def count(self):
@@ -391,9 +391,9 @@ class QuerySet(object):
 
     def aggregation(self, *args):
         if len(args) == 1 and isinstance(args[0], str):
-            self.__fields.extend(str(args[0]).split(','))
+            self.__fields__.extend(str(args[0]).split(','))
         else:
-            self.__fields.extend(args)
+            self.__fields__.extend(args)
 
         return self.find()
 

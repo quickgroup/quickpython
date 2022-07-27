@@ -158,13 +158,13 @@ class ProcessorHandler(web.RequestHandler):
 
     @classmethod
     def scan_dir(cls, path):
-        ret = list(filter(lambda x: os.path.isdir(path + DS + x), os.listdir(path)))
+        ret = list(filter(lambda x: os.path.isdir(path + DS + x) and x.find('__') == -1, os.listdir(path)))
         ret.sort()
         return ret
 
     @classmethod
     def scan_file(cls, path):
-        ret = list(filter(lambda x: os.path.isfile(path + DS + x), os.listdir(path)))
+        ret = list(filter(lambda x: os.path.isfile(path + DS + x) and x.find('__') == -1, os.listdir(path)))
         ret.sort()
         return ret
 
