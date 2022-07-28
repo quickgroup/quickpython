@@ -1,5 +1,5 @@
 import json, logging, os
-import mimetypes
+import mimetypes, importlib
 
 from tornado import web
 
@@ -123,3 +123,17 @@ class HandlerHelper:
             return True
 
         return False
+
+    __APP_PY__ = {}
+
+    @staticmethod
+    def import_app_py(py_name):
+        """导入应用下的数据"""
+        if py_name in HandlerHelper.__APP_PY__:
+            return HandlerHelper.__APP_PY__[py_name]
+        app_path = Config.APP_PATH.replace(Config.ROOT_PATH + "/", '')
+        cmd_path = str(app_path + "/" + py_name).replace("\\", ".").replace(r"/", ".")
+        py_obj = importlib.import_module(cmd_path)
+        HandlerHelper.__APP_PY__[py_name] = py_obj
+        return py_obj
+

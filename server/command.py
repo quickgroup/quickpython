@@ -13,10 +13,9 @@ class CommandManager:
         cmd_path = str(app_path + "/command").replace("\\", ".").replace(r"/", ".")
         app_cmd = importlib.import_module(cmd_path)
         if hasattr(app_cmd, 'COMMANDS'):
-            COMMANDS = app_cmd.COMMANDS
             choice = sys.argv[1]
-            if choice in COMMANDS:
-                COMMANDS[choice](sys.argv[2:] if len(sys.argv) > 2 else [])
+            if choice in app_cmd.COMMANDS:
+                app_cmd.COMMANDS[choice](sys.argv[2:] if len(sys.argv) > 2 else [])
             else:
                 logging.warning("未知命令：{}".format(choice))
         else:

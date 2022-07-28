@@ -4,6 +4,7 @@ from quickpython.component.session import Session
 from quickpython.component.result import Result
 from quickpython.server.settings import SETTINGS
 from .request import Request
+from .handler import HandlerHelper
 
 
 class Controller:
@@ -14,9 +15,14 @@ class Controller:
         self.log = logging.getLogger(self.__class__.__name__)
         self.pro_obj = None         # type:web.processor.ProcessorHandler
         self.params = {}            # 请求数据
-        self.__assign_data = {        # 默认注入参数
+        assign_data = assign_data = {        # 默认注入参数
             'version': self._version,
         }
+        funcs = HandlerHelper.import_app_py("functions")
+        if funcs is not None:
+            for it in dir(funcs):
+                assign_data[it] = getattr(funcs, it)
+        self.__assign_data = assign_data
 
     @property
     def _version(self):
