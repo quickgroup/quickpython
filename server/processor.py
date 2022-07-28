@@ -7,13 +7,13 @@ import tornado
 from tornado import web, httputil
 from tornado.concurrent import run_on_executor
 
-import config
 import quickpython
 from .exception import *
 from .contain import Controller, Request, HandlerHelper
 from .settings import SETTINGS
 from quickpython.component.function import *
 from quickpython.component.result import Result
+from config import Config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -23,7 +23,7 @@ DS = r"/"
 
 class ProcessorHandler(web.RequestHandler):
 
-    executor = ThreadPoolExecutor(max_workers=config.Config.web_thr_count(SETTINGS['pro_thr_num']))
+    executor = ThreadPoolExecutor(max_workers=Config.web_thr_count(SETTINGS['pro_thr_num']))
 
     def __init__(self, application: "Application", request: httputil.HTTPServerRequest, **kwargs: Any):
         super().__init__(application, Request(request), **kwargs)
