@@ -39,7 +39,7 @@ class Connector:
         self.__conn = None      # 数据库连接，子类不能直接访问
         self._cursor = None    # 连接游标
         self._thr_id = get_thr_id()
-        self._autocommit = False   # 自动提交（False表示在事务中
+        self._autocommit = True   # 自动提交（False表示在事务中
         self._expire_time = int(time.time()) + self.get_config('wait_timeout')  # 超时时间
         log.setLevel(logging.DEBUG if self.config.get('echo', True) else logging.INFO)
 
@@ -65,7 +65,7 @@ class Connector:
         self.__conn = conn      # 数据库连接
         self._cursor = None    # 连接游标
         self._thr_id = get_thr_id()
-        self.autocommit(False)
+        self.autocommit(True)
         self._expire_time = int(time.time()) + self.get_config('wait_timeout')  # 超时时间
 
     def __conn__(self):
@@ -93,6 +93,9 @@ class Connector:
     @abc.abstractmethod
     def autocommit(self, x):
         """开启事务"""
+
+    def is_autocommit(self):
+        return self._autocommit
 
     def start_trans(self):
         """开启事务"""
