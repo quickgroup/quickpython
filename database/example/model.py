@@ -4,6 +4,7 @@ model demo
 import logging, threading, time
 from app.common.models import *
 from quickpython.database import *
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ class DemoModel:
     def call(self):
         """"""
         # self.save()
+        self.save_2()
         # self.remove()
         # self.save_update()
         # self.get()
@@ -20,7 +22,7 @@ class DemoModel:
         # self.field_use()
         # join
         # self.join()
-        self.tran2()
+        # self.tran2()
         # self.thread()
 
     def join(self):
@@ -29,13 +31,31 @@ class DemoModel:
 
     def save(self):
         """新增"""
-        mtime = Utils.mtime()
+        mtime = get_mtime()
         UserModel(**{'username': "test1", 'nickname': "test1"}).save()
         UserModel(**{'username': "test2", 'nickname': "test2"}).save()
         UserModel(**{'username': "test3", 'nickname': "test3"}).save()
         UserModel(**{'username': "test4", 'nickname': "test4"}).save()
         UserModel(**{'username': "test5", 'nickname': "test5"}).save()
-        logger.info("新增耗时 {}ms".format(Utils.mtime() - mtime))
+        logger.info("新增耗时 {}ms".format(get_mtime() - mtime))
+
+    def save_2(self):
+        """批量新增"""
+        # mtime = get_mtime()
+        # rows = []
+        # rows.append(UserModel(**{'username': "test1", 'nickname': "test1"}))
+        # rows.append(UserModel(**{'username': "test1", 'nickname': "test2"}))
+        # rows.append(UserModel(**{'username': "test1", 'nickname': "test3"}))
+        # UserModel.bulk_create(rows)
+        # logger.info("批量新增耗时 {}ms".format(get_mtime() - mtime))
+
+        mtime = get_mtime()
+        rows = []
+        rows.append({'username': "test111", 'nickname': "test111"})
+        rows.append({'username': "test222", 'nickname': "test222"})
+        rows.append({'username': "test333", 'nickname': "test333"})
+        UserModel.bulk_create(rows)
+        logger.info("批量新增耗时 {}ms".format(get_mtime() - mtime))
 
     def remove(self):
         """删除"""
@@ -138,22 +158,22 @@ class DemoModel:
 
     def join_2(self):
         """模型预载入查询 多个"""
-        user_7 = UserModel().withs([UserModel.device, UserModel.school])\
-            .where(UserModel.id == 40850)\
-            .where(UserModel.branch_id == 1062)\
+        user_7 = UserModel().withs([UserModel.device, UserModel.school]) \
+            .where(UserModel.id == 40850) \
+            .where(UserModel.branch_id == 1062) \
             .select()
         logger.debug("user_7=\n{}".format(Utils.dict_to_str(user_7)))
 
     def tran(self):
         try:
-            QuerySet.start_trans()      # TODO::开启事务
+            QuerySet.start_trans()  # TODO::开启事务
             """
                 执行数据操作
             """
-            QuerySet.commit()       # TODO::提交事务
+            QuerySet.commit()  # TODO::提交事务
 
         except BaseException as exc:
-            QuerySet.rollback()     # TODO::回滚事务
+            QuerySet.rollback()  # TODO::回滚事务
             raise exc
 
     def tran2(self):
@@ -184,6 +204,7 @@ class DemoModel:
 
         try:
             stockDailyModel = StockDailyModel()
+
             def method_1():
                 # 不停的读取数据
                 while True:
@@ -196,13 +217,13 @@ class DemoModel:
 
             def method_2():
                 while True:
-                    user.save({'password': Utils.mtime()})
+                    user.save({'password': get_mtime()})
                     logger.debug("thr2 更新用户信息完成：{}".format(user))
                     Utils.sleep(1)
 
             def method_3():
                 while True:
-                    user.save({'password': Utils.mtime()})
+                    user.save({'password': get_mtime()})
                     logger.debug("thr3 更新用户信息完成：{}".format(user))
                     Utils.sleep(1)
 
@@ -212,14 +233,15 @@ class DemoModel:
 
         except BaseException as e:
             logger.exception("出现异常")
-            user.save({'password': Utils.mtime()})
+            user.save({'password': get_mtime()})
 
         logger.exception("完成测试")
 
 
-
 if __name__ == '__main__':
     try:
+        from quickpython.server.server import Core
+        Core.init(Config.MODE_CMD)
         DemoModel().call()
     except:
-        Utils.print_exc()
+        logger.exception("测试异常")

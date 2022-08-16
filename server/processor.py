@@ -13,7 +13,7 @@ from .contain import Controller, Request, HandlerHelper
 from .settings import SETTINGS
 from quickpython.component.function import *
 from quickpython.component.result import Result
-from config import Config
+from quickpython.config import Config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

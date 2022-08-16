@@ -2,7 +2,7 @@
     助手方法
 """
 import importlib
-import types
+import types, time
 from inspect import isfunction
 
 
@@ -56,3 +56,7 @@ def local_set(local, name, data):
 def get_thr_id():
     import threading
     return threading.current_thread().ident
+
+
+def get_mtime():
+    return int(time.time() * 1000)

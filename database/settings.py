@@ -17,6 +17,7 @@ DATABASES = {
         'echo': env.get('database.echo', True),
         'echo_words': env.get('database.echo_words', 256),
         'wait_timeout': env.get('database.wait_timeout', 3600),
+        'bulk_size': env.get('database.bulk_size', 500),  # 每次批量新增更新每次最大数量
         'options': {
             'init_command': 'SET default_storage_engine=INNODB;',
             'charset': 'utf8',

@@ -2,7 +2,7 @@
 命令行模式
 """
 import importlib, sys, logging
-from config import Config
+from quickpython.config import Config
 
 
 class CommandManager:

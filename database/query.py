@@ -2,7 +2,8 @@
     查询基础操作集合
     环境：pymysql>=1.0.2
 """
-import time, re, pymysql
+import pymysql
+import time, math, re
 from .connector.connection import Connection
 from .contain.func import *
 from .contain.extend import *
@@ -436,11 +437,33 @@ class QuerySet(object):
         return pk
 
     def insert_all(self, datas):
-        if typeof(datas) != 'list':
+        """批量新增"""
+        if isinstance(datas, list) is False:
             return None
         count = 0
-        for data in datas:
-            count += self.insert(data)
+        # for data in datas:
+        #     count += self.insert(data)
+        bulk_size = int(self._conn.get_config('bulk_size'))
+        bulk_count = math.ceil(len(datas) / bulk_size)
+
+        for idx in range(bulk_count):
+            fields_str, values_list = "", []
+            for data in datas[idx * bulk_size : idx * bulk_size + bulk_size]:
+                fields, values = [], []
+                for key, val in data.items():
+                    fields.append(format_field(key))
+                    values.append(format_val(val))
+                values_list.append("({})".format(",".join(values)))
+                fields_str = ",".join(fields)
+
+            if len(fields_str) == 0 or len(values_list) == 0:
+                continue
+
+            sql = "INSERT INTO {}({}) VALUES {}".format(self.__table_name_sql__(), fields_str, ",".join(values_list))
+            if self.__fetch_sql__:
+                return sql
+            count += self.__conn__().execute(sql)[0]
+
         return count
 
     def update(self, data):

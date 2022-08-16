@@ -1,7 +1,7 @@
 import sys, signal, logging, datetime
 import tornado.ioloop
 import tornado.web
-from config import Config       # 应用需要自己有一个config文件，或者包含且继承quickpython.config
+from quickpython.config import Config       # 应用需要自己有一个config文件，或者包含且继承quickpython.config
 from quickpython.component import hooker
 from .settings import SETTINGS, ROUTES
 from .command import CommandManager, EventManager

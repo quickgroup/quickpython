@@ -130,6 +130,9 @@ class Model:
             self.where(*args, **kwargs)
         return self.find()
 
+    def first(self):
+        return self.find()
+
     def find(self):
         # 预加载处理（预载入模式开启后，数据返回将进行关联数据填充
         if not_empty(self.__withs__):
@@ -281,7 +284,7 @@ class Model:
         return data2
 
     """
-        批量方法
+    基础方法
     """
     def update(self, data):
         # 是否未加载就保存，那就先查询
@@ -291,6 +294,27 @@ class Model:
     def delete(self):
         if len(self.__query__.__get_map__()) > 0:
            self.__query__.delete()     # 实际删除
+
+    """批量新增"""
+    @classmethod
+    def bulk_create(cls, rows):
+        if isinstance(rows, list):
+            items = rows
+        elif isinstance(rows, cls):
+            items = [rows]
+        else:
+            raise Exception("不支持的新增数据类型：{}".format(type(rows)))
+
+        if isinstance(items[0], cls):
+            datas = [it.__dict__() for it in items]
+            cls().__query__.insert_all(datas)
+        elif isinstance(items[0], dict):
+            cls().__query__.insert_all(items)
+        elif isinstance(items[0], Model):
+            datas = [it.__dict__() for it in items]
+            items[0].__query__.insert_all(datas)
+        else:
+            raise Exception("不支持的新增数据类型：{}".format(type(items[0])))
 
     """
         属性控制
