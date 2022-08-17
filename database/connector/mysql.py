@@ -44,29 +44,19 @@ class MysqlConnector(Connector):
         config['wait_timeout'] = int(config.get('wait_timeout'))
         return config
 
-    def connect(self):
+    def _connect(self):
         """创建新连接"""
-        if self.get_config('engine') == 'mysql':
-            conn = pymysql.connect(
-                host=self.get_config('hostname'),
-                port=self.get_config('port'),
-                user=self.get_config('username'),
-                password=self.get_config('password'),
-                db=self.get_config('database'),
-                charset=self.get_config('charset'))
+        conn = pymysql.connect(
+            host=self.get_config('hostname'),
+            port=self.get_config('port'),
+            user=self.get_config('username'),
+            password=self.get_config('password'),
+            db=self.get_config('database'),
+            charset=self.get_config('charset'))
+        return conn
 
-            self.connect_after(conn=conn)
-            return self
-
-        else:
-            raise Exception("不支持的数据库引擎：{}".format(self.get_config('engine')))
-
-    def autocommit(self, x):
-        self._autocommit = x
+    def _autocommit(self, x):
         self.__conn__().autocommit(x)     # 设置底层连接事务状态
 
-    def get_cursor(self):
-        self._check_connection_timeout()
-        if self._cursor is None:
-            self._cursor = self.__conn__().cursor(pymysql.cursors.DictCursor)
-        return self._cursor     # type: pymysql.connect.cursorclass
+    def _get_cursor(self):
+        return self.__conn__().cursor(pymysql.cursors.DictCursor)

@@ -56,9 +56,19 @@ class Connector:
             return self.config['options'][key]
         return def_val
 
-    @abc.abstractmethod
     def connect(self):
+        self.connect_before()
+        conn = self._connect()
+        self.connect_after(conn=conn)
+        return self
+
+    @abc.abstractmethod
+    def _connect(self):
         """子类实现具体连接方法"""
+
+    def connect_before(self):
+        self.__conn = None
+        self._cursor = None
 
     def connect_after(self, conn):
         """连接成功后设置环境"""
@@ -72,16 +82,25 @@ class Connector:
         self._check_connection_timeout()
         return self.__conn
 
-    @abc.abstractmethod
     def get_cursor(self):
+        self._check_connection_timeout()
+        if self._cursor is None:
+            self._cursor = self._get_cursor()
+        return self._cursor
+
+    @abc.abstractmethod
+    def _get_cursor(self):
         """获取游标：子类实现具体连接方法"""
 
     def _check_connection_timeout(self):
         """检测超时，超时将重新连接（处于事务中时不重连）"""
-        if self._autocommit is False:  # 事务中跳过，非自动提交就是在事务中
+        if self._autocommit is False:  # 事务中不检测
             return
         if self._expire_time <= int(time.time()):  # 超时调用重连
+            log.info("已经超时，正在重连")
             self.connect()
+        else:
+            log.info("未超时")
 
     def ping(self):
         """数据库PING"""
@@ -90,8 +109,11 @@ class Connector:
         self.config['echo'] = x
         self.log.setLevel(logging.DEBUG if x else logging.INFO)
 
-    @abc.abstractmethod
     def autocommit(self, x):
+        self._autocommit = x
+
+    @abc.abstractmethod
+    def _autocommit(self, x):
         """开启事务"""
 
     def is_autocommit(self):

@@ -59,4 +59,5 @@ class Connection:
             log.info("新连接 {}".format(cache_name))
             engine = Connection.__find_engine(config)
             local_set(Connection._local, cache_name, engine(name, config=config).connect())
+
         return local_get(Connection._local, cache_name)

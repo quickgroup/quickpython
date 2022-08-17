@@ -14,7 +14,7 @@ class DemoModel:
     def call(self):
         """"""
         # self.save()
-        self.save_2()
+        # self.save_2()
         # self.remove()
         # self.save_update()
         # self.get()
@@ -24,6 +24,8 @@ class DemoModel:
         # self.join()
         # self.tran2()
         # self.thread()
+        # connection
+        self.connection()
 
     def join(self):
         self.join_1()
@@ -236,6 +238,14 @@ class DemoModel:
             user.save({'password': get_mtime()})
 
         logger.exception("完成测试")
+
+    def connection(self):
+        """测试连接存活"""
+        conn = QuerySet.connect()
+        for idx in range(3):
+            ret = conn.execute("SELECT * FROM `user` WHERE username='adminlong'")
+            logger.debug("ret={}".format(ret))
+            time.sleep(5)
 
 
 if __name__ == '__main__':
