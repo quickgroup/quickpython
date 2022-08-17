@@ -97,10 +97,7 @@ class Connector:
         if self._autocommit is False:  # 事务中不检测
             return
         if self._expire_time <= int(time.time()):  # 超时调用重连
-            log.info("已经超时，正在重连")
             self.connect()
-        else:
-            log.info("未超时")
 
     def ping(self):
         """数据库PING"""
