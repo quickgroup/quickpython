@@ -91,12 +91,15 @@ class Core:
         }, **settings)
         # 启动web
         server = cls.server = tornado.web.HTTPServer(application, decompress_request=True)
-        if Config.IS_WIN32:
-            server.listen(SETTINGS['port'])
+        mode = 2    # 2=全平台统一多线程，1=linux多进程，win多线程
+        if mode == 1:
+            if Config.IS_WIN32:
+                server.listen(SETTINGS['port'])
+            else:
+                server.bind(SETTINGS['port'])
+                server.start(0)     # 当参数小于等于０时，则根据当前机器的cpu核数来创建子进程，大于１时直接根据指定参数创建子进程
         else:
-
-            server.bind(SETTINGS['port'])
-            server.start(0)     # 当参数小于等于０时，则根据当前机器的cpu核数来创建子进程，大于１时直接根据指定参数创建子进程
+            server.listen(SETTINGS['port'])
 
         cls._web_signal_init()
         cls.log.info("WEB start complete, port={}".format(SETTINGS['port']))
