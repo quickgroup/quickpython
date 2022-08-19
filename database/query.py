@@ -365,6 +365,7 @@ class QuerySet(object):
         if sql is None or len(sql) == 0:
             return None
 
+        sql += " LIMIT 1"
         if self.__fetch_sql__:
             return sql
         count, result, field_info = self.__conn__().execute_all(sql)
