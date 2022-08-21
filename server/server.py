@@ -73,8 +73,7 @@ class Core:
         # 加载命令行程序
         CommandManager.call(argv)
         # 应用结束
-        hooker.send(hooker.EXIT)
-        hooker.stop()
+        cls._app_stop()
 
     @classmethod
     def web(cls):
