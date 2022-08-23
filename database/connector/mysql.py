@@ -2,7 +2,6 @@
     数据库连接管理器
 """
 import pymysql
-import time, threading, logging
 from .. import settings
 from ..contain.func import *
 from .base import Connector

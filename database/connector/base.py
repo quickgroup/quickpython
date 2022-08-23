@@ -1,9 +1,7 @@
 """
     数据库连接管理器
 """
-import abc
-import time, threading, logging
-from .. import settings
+import abc, logging
 from ..contain.func import *
 
 from ..log import get_logger
