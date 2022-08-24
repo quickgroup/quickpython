@@ -218,7 +218,85 @@ class QPRedisCache(CacherBase):
         self.__conn.delete(key)
 
 
-CACHE_TYPE = 'redis'     # 引擎类型
+class QPMemoryCache(CacherBase):
+
+    LOCK_FILE = Config.CACHE_PATH + "/cache.file" + ".lock"
+
+    __DATA__ = {}
+
+    @classmethod
+    def _load_data(cls):
+        return cls.__DATA__
+
+    @classmethod
+    def _write_data(cls, data):
+        cls.__DATA__ = data
+
+    def ttl(self, key, data=None):
+        if data is None:
+            data = self._load_data()
+        if key in data:
+            return data[key][TIME_K] - self._stime()
+        return super().ttl(key)
+
+    def get(self, key, def_val=None, timeout=CacherBase.TIMEOUT):
+        with FLock(self.LOCK_FILE):
+            self.__check_overtime__()
+            data = self._load_data()
+            if key in data:
+                item = data[key]
+                if item[TIME_K] > self._stime():
+                    return item[VAL_K]
+            else:
+                logger.debug("key={} not fund".format(key))
+
+            # 默认数据
+            if def_val is not None:
+                def_val = def_val() if isinstance(def_val, types.FunctionType) else def_val
+                data[key] = {TIME_K: self._stime() + timeout, VAL_K: def_val}
+                self._write_data(data)
+
+            return def_val
+
+    def set(self, key, val, timeout=CacherBase.TIMEOUT):
+        """timeout: 60s"""
+        with FLock(self.LOCK_FILE):
+            self.__check_overtime__()
+            if val is None:
+                return self.delete(key)
+
+            data = self._load_data()
+            if timeout is True and key in data:     # 继承原来的超时时间
+                data[key] = {TIME_K: data[key][TIME_K], VAL_K: val}
+            else:
+                data[key] = {TIME_K: self._stime() + timeout, VAL_K: val}
+
+            self._write_data(data)
+
+    def delete(self, key):
+        with FLock(self.LOCK_FILE):
+            data = self._load_data()
+            if key in data:
+                data.pop(key)
+                self._write_data(data)
+
+    def destroy(self):
+        self._write_data({})
+
+    def __check_overtime__(self):
+        data = self._load_data()
+        keys = list(data.keys())
+        is_over_item = False
+        for key in keys:
+            item = data[key]
+            if item[TIME_K] < self._stime():
+                data.pop(key)
+                is_over_item = True
+        if is_over_item:
+            self._write_data(data)
+
+
+CACHE_TYPE = 'memory'     # 引擎类型
 
 
 class QPCache(CacherBase):
@@ -234,7 +312,8 @@ class QPCache(CacherBase):
     def __load_engine(type_: str):
         if type_.upper() == 'FILE': engine = QPFileCache()
         elif type_.upper() == 'REDIS': engine = QPRedisCache()
-        else: raise Exception('不支持的缓存引擎')
+        elif type_.upper() == 'MEMORY': engine = QPMemoryCache()
+        else: raise Exception('不支持的缓存引擎：{}'.format(type_))
         return engine
 
     def __getattribute__(self, item):
