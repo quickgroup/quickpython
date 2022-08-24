@@ -296,7 +296,7 @@ class QPMemoryCache(CacherBase):
             self._write_data(data)
 
 
-CACHE_TYPE = 'memory'     # 引擎类型
+CACHE_TYPE = 'REDIS'     # 引擎类型
 
 
 class QPCache(CacherBase):
