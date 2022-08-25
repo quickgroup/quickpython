@@ -420,6 +420,7 @@ class Model:
             def func(it):
                 k, c = it
                 data[k] = getattr(self, k)
+
         list(map(func, fields))
         return data
 
@@ -446,9 +447,11 @@ class Model:
         if isinstance(models, str):
             models = models.split(',')
 
-        for it in models:
-            if isinstance(it, OneToOne):    # 只支持一对一的预载入
-                self.__withs__.append(it)
+        for name in models:
+            if name in self.__attrs__:
+                attr = self.__attrs__[name]
+                if isinstance(attr, OneToOne):    # 只支持一对一的预载入
+                    self.__withs__.append(attr)
 
         return self
 
@@ -489,7 +492,8 @@ class Model:
             self.withs(related_attrs)
         # 查询
         count = self.__query__.count()
-        rows = self.__query__.page(page, page_size).select()
+        rows = self.page(page, page_size).select()
+        rows = Model.to_dict(rows)
         return Pagination(rows, page, page_size, count, params)
 
 

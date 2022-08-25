@@ -555,16 +555,16 @@ class QuerySet(object):
             count, list_data, field_info = self.__conn__().execute_all(sql)
             self.__set_cache(ck, (count, list_data, field_info))
 
+        def field_to_dict(it, table=None):
+            f = it['Field']
+            field_name = f if table is None else "{}.{} AS {}__{}".format(table, f, table, f)
+            field_as = f if table is None else "{}__{}".format(table, f)
+            return {'field': field_name, 'field_as': field_as, 'field_': f, 'type': it['Type'], 'key': it['Key']}
+
         if full_name:
-            all_column = list([{'field': "{}.{} AS {}__{}".format(table, item[0], table, item[0]),
-                                'field_as': "{}__{}".format(table, item[0]),
-                                'field_': item[0],
-                                'type': item[1], 'key': item[4]} for item in list_data])
+            all_column = list([field_to_dict(it, table) for it in list_data])
         else:
-            all_column = list([{'field': item[0],
-                                'field_as': item[0],
-                                'field_': item[0],
-                                'type': item[1], 'key': item[4]} for item in list_data])
+            all_column = list([field_to_dict(it) for it in list_data])
 
         if conv is str:
             return ','.join([it['field'] for it in all_column])
