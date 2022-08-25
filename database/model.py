@@ -89,7 +89,7 @@ class Model:
     def __obj_attr_distribution(self):
         """为对象布局属性（字段、关联属性）"""
         for name, it in self.__attrs__.items():
-            object.__setattr__(self, it.name, copy.deepcopy(it))
+            object.__setattr__(self, it.name, copy.copy(it))
 
     def where(self, *args, **kwargs):
         args = list(args)
