@@ -21,15 +21,13 @@ class DemoModel:
         # self.aggregation()
         # self.field_use()
         # join
-        # self.join()
+        self.join_1()
+        # self.join_2()
+        # tran
         # self.tran2()
         # self.thread()
         # connection
-        self.connection()
-
-    def join(self):
-        self.join_1()
-        # self.join_2()
+        # self.connection()
 
     def save(self):
         """新增"""
@@ -138,9 +136,18 @@ class DemoModel:
         # Utils.print_dicts(user_6.device)
 
         # 懒加载
-        # user_6 = UserModel().where("user.id", 40830).get()
-        # Utils.print_dicts(user_6)
-        # print("user_6.device", id(user_6.device), user_6.device)
+        # user_6 = UserModel().where(username="test111").find()
+        # print("user_6", user_6)
+        # print("user_6.login_log", id(user_6.login_log), user_6.login_log)
+        # print("user_6.login_logs", id(user_6.login_logs), user_6.login_logs)
+        # return
+
+        # 懒加载2
+        users = UserModel().where(username__in=["test111", "test222", "test333"]).select()
+        for user in users:
+            logger.info("user={}".format(user))
+            logger.info("user.login_log={}:{}".format(id(user.login_log), user.login_log))
+
         # print("user_6.device", id(user_6.device), user_6.device)
         # user_6.device.key = Utils.datetime_now()
         # user_6.device.save()
@@ -180,17 +187,16 @@ class DemoModel:
 
     def tran2(self):
         """测试事务"""
-        UserModel().where(id=49253).find().save({'password': 1111})
-        UserModel().where(username__in=['test111', 'test222']).delete()
+        from decimal import Decimal
         try:
             with Transaction():
-                UserModel().where(id=49253).find().save({'password': Utils.stime()})
-
+                UserModel().where(username="test111").find().save({'password': time.time()})
                 UserModel(**{'username': "test111", 'nickname': "test111"}).save()
-                logger.debug("保存用户完成")
 
-                Utils.sleep(10)
-                raise Exception("弹出异常")
+                # 模拟事务中出现异常
+                ret = Decimal("0") / Decimal("0")
+                # 模拟事务中出现异常
+                # raise Exception("模拟事务中出现异常")
 
                 UserModel(**{'username': "test222", 'nickname': "test222"}).save()
                 logger.debug("保存用户完成")

@@ -33,6 +33,8 @@ class Model:
         self.__modified_fields__ = []  # 模型数据是否修改，用于更新
         self.__withs__ = []         # 预加载属性
         self.__class__._load_class()          # 初始类信息：字段等
+        # 对象字段填充
+        self.__obj_attr_distribution()
         # 对象数据赋值
         for key in self.__attrs__:
             if key in kwargs:
@@ -83,6 +85,11 @@ class Model:
                 cls.__attrs__[name] = obj
 
         # logger.debug("加载模型字段 cls={}, primary_key={}".format(cls, cls.__table_pk__))
+
+    def __obj_attr_distribution(self):
+        """为对象布局属性（字段、关联属性）"""
+        for name, it in self.__attrs__.items():
+            object.__setattr__(self, it.name, copy.deepcopy(it))
 
     def where(self, *args, **kwargs):
         args = list(args)
@@ -148,19 +155,26 @@ class Model:
         if row is None:
             return None
 
+        return self._result_transhipment(row)
+
+    def _result_transhipment(self, row):
         # 数据装载
         obj_data = {}
         for key in self.__table_fields__:
             if key in row:
                 obj_data[key] = row[key]
 
-        # obj = object.__new__(self.__class__)  # 另外一种模型new方法
+        # 方式一
+        # obj = object.__new__(self.__class__)
         # obj.__init__()
+        # obj.__load_data__(obj_data)
+        # 方式二
         obj = self.__class__(**obj_data)
+
         obj.__relation__ = self.__relation__
         obj.__modified_fields__ = []
 
-        # 预载入结果
+        # 预载入数据装载
         if not_empty(self.__withs__):
             obj.eagerly_result(row, self.__withs__)
 
@@ -186,21 +200,7 @@ class Model:
             return []
 
         # 数据装载
-        ret = []
-        for row in rows:
-            obj_data = {}
-            for key in self.__table_fields__:
-                if key in row:
-                    obj_data[key] = row[key]
-
-            obj = self.__class__(**row)
-            obj.__relation__ = self.__relation__
-            obj.__modified_fields__ = []
-            ret.append(obj)
-            # 预载入结果
-            if not_empty(self.__withs__):
-                obj.eagerly_result(row, self.__withs__)
-
+        ret = [self._result_transhipment(row) for row in rows]
         # logger.debug("ret={}".format(ret))
         return Model.to_dict(ret) if to_dict else ret
 
