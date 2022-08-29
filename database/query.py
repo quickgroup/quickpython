@@ -231,8 +231,10 @@ class QuerySet(object):
         'NEQ': '<>',
         'LT': '<',
         'LTE': '<=',
+        'ELT': '<=',    # 兼容tp5
         'GT': '>',
         'GTE': '>=',
+        'EGT': '>=',    # 兼容tp5
     }
 
     __op_in = {
@@ -411,7 +413,7 @@ class QuerySet(object):
         if len(fields) == 0 or len(values) == 0:
             return 0
 
-        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
+        sql = "INSERT INTO {}({}) VALUES({})".format(format_field(self.__table__), ", ".join(fields), ", ".join(values))
         if self.__fetch_sql__:
             return sql
         return self.__conn__().execute(sql)[0]
@@ -428,7 +430,7 @@ class QuerySet(object):
         if len(fields) == 0 or len(values) == 0:
             return 0
 
-        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
+        sql = "INSERT INTO {}({}) VALUES({})".format(format_field(self.__table__), ", ".join(fields), ", ".join(values))
         if self.__fetch_sql__:
             return sql
 
@@ -460,7 +462,7 @@ class QuerySet(object):
             if len(fields_str) == 0 or len(values_list) == 0:
                 continue
 
-            sql = "INSERT INTO {}({}) VALUES {}".format(self.__table_name_sql__(), fields_str, ",".join(values_list))
+            sql = "INSERT INTO {}({}) VALUES {}".format(format_field(self.__table__), fields_str, ",".join(values_list))
             if self.__fetch_sql__:
                 return sql
             count += self.__conn__().execute(sql)[0]

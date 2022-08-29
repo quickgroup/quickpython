@@ -73,12 +73,6 @@ class RelationModel:
 
         return self.model
 
-    def __str__(self):
-        return str(self.__dict__)
-
-    def __repr__(self):
-        return str(self.__dict__)
-
     def eagerly(self, query):
         """预载入关联查询（JOIN方式）"""
         relation = self.name

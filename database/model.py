@@ -19,19 +19,18 @@ class Model:
     __table_args__ = None   # 表加参数
     __table_fields__ = None # 模型的字段列表
     __clone_obj__ = None    # 待克隆对象
-    __attrs__ = None        # 模型显示的属性
+    __attrs__ = None        # 模型属性
     __soft_delete__ = None  # type:ColumnBase
-    __relation__ = None     # 被关联信息
-    __parent__ = []         # 父模型
-    __origin__ = {}         # 原始数据（数据查询
-    __data__ = {}           # 设置的数据
-    __withs__ = []          # 预加载属性
     # __query__ = None        # type: QuerySet
 
     def __init__(self, *args, **kwargs):
         self._is_new = False  # 是否是新增
         self.__modified_fields__ = []  # 模型数据是否修改，用于更新
-        self.__withs__ = []         # 预加载属性
+        self.__relation__ = None     # 被关联信息
+        self.__parent__ = []         # 父模型
+        self.__origin__ = {}         # 原始数据（数据查询
+        self.__data__ = {}           # 设置的数据
+        self.__withs__ = []          # 预加载属性
         self.__class__._load_class()          # 初始类信息：字段等
         # 对象字段填充
         self.__obj_attr_distribution()
@@ -448,6 +447,8 @@ class Model:
             models = models.split(',')
 
         for name in models:
+            if isinstance(name, RelationModel):
+                name = name.name
             if name in self.__attrs__:
                 attr = self.__attrs__[name]
                 if isinstance(attr, OneToOne):    # 只支持一对一的预载入

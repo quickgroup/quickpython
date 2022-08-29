@@ -136,7 +136,8 @@ class Connector:
     def _cur_execute(self, cur, sql: str):
         try:
             sql = sql.strip()
-            log.debug(self.get_config('engine') + ": " + (sql if len(sql) <= 1024 else sql[0:1024]))
+            # log.debug(self.get_config('engine') + ": " + (sql if len(sql) <= 1024 else sql[0:1024]))
+            log.debug((sql if len(sql) <= 1024 else sql[0:1024]))
             return cur.execute(sql)
 
         except SystemExit as e:
