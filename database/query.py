@@ -2,18 +2,22 @@
     查询基础操作集合
     环境：pymysql>=1.0.2
 """
-import logging, time, re, pymysql
+import pymysql
+import time, math, re
 from .connector.connection import Connection
 from .contain.func import *
-from .contain.component import *
-from . import setttings
+from .contain.extend import *
+from . import settings
+from .log import get_logger
+logger = get_logger()
 
-logger = logging.getLogger(__name__)
-
-options = setttings.DATABASES['default']['options']
+options = settings.DATABASES['default']['options']
+def_name = 'default'
 
 
 def format_field(name):
+    if name is None or len(name) == 0:
+        return name
     if options['field_sep'] is None or options['field_sep'] is True:
         arr = name.split(".")
         return "`{}`".format(name) if len(arr) == 1 else "`{}`.`{}`".format(arr[0], arr[1])
@@ -53,35 +57,53 @@ def typeof(variate):
     return mold
 
 
+class Transaction:
+
+    def __init__(self, name='default'):
+        self.conn = Connection.connect(name)
+
+    def __enter__(self):
+        self.conn.start_trans()
+
+    def __exit__(self, exc_type, value, traceback):
+        if exc_type is None:
+            self.conn.commit()
+            return True
+        else:
+            self.conn.rollback()
+            return False
+
+
 class QuerySet(object):
 
-    def __init__(self):
+    def __init__(self, connection=None):
         self.__map = {}
-        self.__database = self.__conn.config['database']
         self.__table = ''
-        self.__fields = []
+        self.__fields__ = []
         self.__where = {}
         self.__alias = ''
         self.__join = []
         self.__having = []
         self.__distinct = False
-        self.__model__ = None
+        self.__for_update = None
+        self.__fetch_sql__ = False
         self.__options = {
             'multi': {},
             'where': {},
         }
-        self.prefix = self.__conn.get_config("prefix", '')
+        self._conn = self.connect() if connection is None else connection
+        self.prefix = self._conn.get_config("prefix", '')
+        self.__database = self._conn.get_config('database', '')
 
-    @property
-    def __conn(self):
-        return Connection.get_connect()
+    @staticmethod
+    def connect():
+        return Connection.connect('default')
+    
+    def __conn__(self):
+        return self._conn
 
     def __close(self):
-        self.__conn.close()
-
-    @property
-    def __self(self):
-        return self if self.__model__ is None else self.__model__
+        self.__conn__().close()
 
     @property
     def __table__(self):
@@ -91,6 +113,13 @@ class QuerySet(object):
     def table(self, table):
         self.__table = table
         return self
+
+    def __table_name_sql__(self):
+        """sql中的表名，识别并增加别名"""
+        if empty(self.prefix):
+            return format_field(self.__table__)
+        table_name = "{}{}".format(format_field(self.__table__), format_field(self.__table))
+        return table_name
 
     def where(self, field, op=None, condition=None):
         self.__parse_where_exp("AND", field, op, condition)
@@ -155,9 +184,10 @@ class QuerySet(object):
         return self
 
     def order(self, field, asc='ASC'):
-        if 'order' not in self.__options:
-            self.__options['order'] = []
-        self.__options['order'].append("{} {}".format(format_field(field), asc))
+        if not_empty(field):
+            if 'order' not in self.__options:
+                self.__options['order'] = []
+            self.__options['order'].append("{} {}".format(format_field(field), asc.upper()))
         return self
 
     def group(self, group):
@@ -185,7 +215,7 @@ class QuerySet(object):
                 val = "{}.{}{}".format(prefix, val, ('' if alias is None else " AS {}{}".format(alias, val)))
                 field[idx] = val
 
-        self.__fields.extend(field)
+        self.__fields__.extend(field)
         return self
 
     def distinct(self, is_true=True):
@@ -197,22 +227,31 @@ class QuerySet(object):
         return self
 
     __op_map = {
-        'eq': '=',
-        'neq': '<>',
-        'lt': '<',
-        'elt': '<=',
-        'gt': '>',
-        'egt': '>=',
+        'EQ': '=',
+        'NEQ': '<>',
+        'LT': '<',
+        'LTE': '<=',
+        'GT': '>',
+        'GTE': '>=',
     }
 
     __op_in = {
-        'in': 'IN',
-        'not in': 'NOT IN',
-        'exists': 'EXISTS',
+        'IN': 'IN',
+        'NOT IN': 'NOT IN',
+        'NOT_IN': 'NOT IN',
+        'EXISTS': 'EXISTS',
     }
 
-    def get_map(self):
+    __op_extend = {
+        'RANGE': 'RANGE',
+    }
+
+    def __get_map__(self):
         return self.__map
+
+    def __set_map__(self, map):
+        self.__map = map
+        return self
 
     def __com_where_sql(self, to_str=True):
         """构建WHERE条件"""
@@ -226,8 +265,8 @@ class QuerySet(object):
                 # logger.debug("condition={}".format(condition))
                 conditions = condition if isinstance(condition[0], list) else [condition]
                 for cond in conditions:
-                    op = str(cond[0]).lower()
-                    if op == 'exp':
+                    op = str(cond[0]).upper()
+                    if op == 'EXP':
                         where_item = str(cond[1])      # 表达式查询，支持SQL语法
                     elif op in self.__op_map:
                         where_item = "{}{}{}".format(format_field(field), self.__op_map[op], format_val(cond[1]))
@@ -237,6 +276,10 @@ class QuerySet(object):
                             in_val = [format_val(it) for it in cond[1]]
                             in_val = ",".join(in_val)
                         where_item = "{}{}({})".format(format_field(field), self.__op_in[op], in_val)
+                    elif op in self.__op_extend:
+                        if op == 'RANGE':
+                            val = cond[1]
+                            where_item = "{} BETWEEN {} AND {}".format(format_field(field), format_val(val[0]), format_val(val[1]))
                     else:
                         where_item = "{}{}{}".format(format_field(field), cond[0], format_val(cond[1]))
 
@@ -261,15 +304,13 @@ class QuerySet(object):
         if self.__distinct:
             sa.append("distinct")
 
-        fields = ','.join(self.__fields)
+        fields = ','.join(self.__fields__)
         sa.append("{}".format(fields if len(fields) > 0 else '*'))
-
-        table_name = '' if self.prefix == '' else ' `{}`'.format(self.__table)
-        sa.append("FROM {}{}".format(self.__table__, table_name))
-        if self.__alias != '':
+        sa.append("FROM {}".format(self.__table_name_sql__()))
+        if not_empty(self.__alias):
             sa.append(self.__alias)
 
-        if len(self.__join) > 0:
+        if not_empty(self.__join):
             for item in self.__join:
                 table, alias = item['table'], ''
                 if isinstance(table, dict):
@@ -278,7 +319,8 @@ class QuerySet(object):
                 table = self.__complement_table_name(table)
                 sa.append("{} JOIN {} {} ON {}".format(item['type_'], table, alias, item['on']))
 
-        sa.append(self.__com_where_sql())
+        if not_empty(self.__map):
+            sa.append(self.__com_where_sql())
 
         if 'group' in self.__options:
             sa.append("GROUP BY {}".format(self.__options['group']))
@@ -287,24 +329,28 @@ class QuerySet(object):
             for item in self.__having:
                 sa.append(item)
 
-        if self.__options.get('order'):
+        if not_empty(self.__options.get('order')):
             sa.append("ORDER BY {}".format(",".join(self.__options.get('order', []))))
-
-        if self.__options.get('limit'):
+        if not_empty(self.__options.get('limit')):
             sa.append("LIMIT {}".format(self.__options['limit']))
+        if not_empty(self.__for_update):
+            sa.append(self.__for_update)
+
         return " ".join(sa)
 
     def build_sql(self):
-        column = self.__fields
-
+        column = self.__fields__
         if column == '*':
             column = self.__get_column__(str)
-
         sql = self.__com_query_sql()
         return sql
 
+    def fetch_sql(self):
+        self.__fetch_sql__ = True
+        return self
+
     def __get_field(self, table=None):
-        column = self.__fields
+        column = self.__fields__
         if '*' in column:
             column = self.__get_column__(str, table=table)
 
@@ -315,53 +361,43 @@ class QuerySet(object):
     """
 
     def find(self):
+        self.limit(1)
         sql = self.__com_query_sql()
         if sql is None or len(sql) == 0:
             return None
 
-        # sql += " LIMIT 1"
-        # logger.debug("{} {}".format(id(self.__conn), sql))
-        count, result, field_info = self.__conn.execute_all(sql)
-        if result is None or len(result) == 0:
-            return None
-
-        # 根据返回字段进行数据封装
-        data = {}
-        row = result[0]
-        for idx in range(len(field_info)):
-            name = field_info[idx][0]
-            data[name] = row[idx]
-
-        return data
+        if self.__fetch_sql__:
+            return sql
+        count, result, field_info = self.__conn__().execute_all(sql)
+        return None if empty(result) else result[0]
 
     def select(self):
         sql = self.__com_query_sql()
         if sql is None:
             return None
 
-        count, result, field_info = self.__conn.execute_all(sql)
-        ret = []
-
-        for index, item in enumerate(result):
-            data = {}
-            for idx in range(len(field_info)):
-                name = field_info[idx][0]
-                data[name] = item[idx]
-            ret.append(data)
-
-        return ret
+        if self.__fetch_sql__:
+            return sql
+        return self.__conn__().execute_all(sql)[1]
 
     def value(self, field):
-        self.__fields = [field]
+        _fields = self.__fields__
+        self.__fields__ = [field]
         sql = self.__com_query_sql()
-        count, result, _ = self.__conn.execute(sql)
-        if result is not None:
-            return result[0]
-        else:
-            return 0
+        count, result, _ = self.__conn__().execute(sql)
+        self.__fields__ = _fields
+        return 0 if result is None else result[field]
 
     def count(self):
         return self.value('count(*)')
+
+    def aggregation(self, *args):
+        if len(args) == 1 and isinstance(args[0], str):
+            self.__fields__.extend(str(args[0]).split(','))
+        else:
+            self.__fields__.extend(args)
+
+        return self.find()
 
     def insert(self, data):
         if isinstance(data, dict) is False:
@@ -375,8 +411,10 @@ class QuerySet(object):
         if len(fields) == 0 or len(values) == 0:
             return 0
 
-        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
-        return self.__conn.execute(sql)[0]
+        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
+        if self.__fetch_sql__:
+            return sql
+        return self.__conn__().execute(sql)[0]
 
     def insert_get_id(self, data):
         if isinstance(data, dict) is False:
@@ -390,19 +428,43 @@ class QuerySet(object):
         if len(fields) == 0 or len(values) == 0:
             return 0
 
-        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
+        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table_name_sql__(), ", ".join(fields), ", ".join(values))
+        if self.__fetch_sql__:
+            return sql
 
         # 执行
-        count, ret, pk = self.__conn.execute_get_id(sql)
+        count, ret, pk = self.__conn__().execute_get_id(sql)
         # logger.debug("pk={}".format(pk))
         return pk
 
     def insert_all(self, datas):
-        if typeof(datas) != 'list':
+        """批量新增"""
+        if isinstance(datas, list) is False:
             return None
         count = 0
-        for data in datas:
-            count += self.insert(data)
+        # for data in datas:
+        #     count += self.insert(data)
+        bulk_size = int(self._conn.get_config('bulk_size'))
+        bulk_count = math.ceil(len(datas) / bulk_size)
+
+        for idx in range(bulk_count):
+            fields_str, values_list = "", []
+            for data in datas[idx * bulk_size : idx * bulk_size + bulk_size]:
+                fields, values = [], []
+                for key, val in data.items():
+                    fields.append(format_field(key))
+                    values.append(format_val(val))
+                values_list.append("({})".format(",".join(values)))
+                fields_str = ",".join(fields)
+
+            if len(fields_str) == 0 or len(values_list) == 0:
+                continue
+
+            sql = "INSERT INTO {}({}) VALUES {}".format(self.__table_name_sql__(), fields_str, ",".join(values_list))
+            if self.__fetch_sql__:
+                return sql
+            count += self.__conn__().execute(sql)[0]
+
         return count
 
     def update(self, data):
@@ -411,7 +473,7 @@ class QuerySet(object):
 
         if len(self.__map) == 0:
             raise Exception("禁止不使用 where 更新数据")
-        sql_where = self.__com_where_sql()
+        where_str = self.__com_where_sql()
 
         fields = []
         for key, val in data.items():
@@ -421,21 +483,24 @@ class QuerySet(object):
             return 0
 
         # 表名、更新的字段、限制条件
-        sql = "UPDATE {} SET {} {}".format(format_field(self.__table__), ", ".join(fields), sql_where)
-        count, ret, _ = self.__conn.execute(sql)
-        return count
+        sql = "UPDATE {} SET {} {}".format(self.__table_name_sql__(), ", ".join(fields), where_str)
+        if self.__fetch_sql__:
+            return sql
+
+        return self.__conn__().execute(sql)[0]   # count, ret, _
 
     def set_option(self, key, val):
         return self.update({key: val})
 
     def delete(self):
-        sql_where = self.__com_where_sql()
-        if len(sql_where.strip()) == 0:
+        where_str = self.__com_where_sql()
+        if len(where_str.strip()) == 0:
             raise Exception("禁止不使用 where 删除数据")
 
-        sql = "DELETE FROM {} {}".format(self.__table__, sql_where)
-        count, result, _ = self.__conn.execute(sql)
-        return count
+        sql = "DELETE FROM {} {}".format(self.__table_name_sql__(), where_str)
+        if self.__fetch_sql__:
+            return sql
+        return self.__conn__().execute(sql)[0]
 
     def set_inc(self, key, step=1):
         return self.update({key: key + '+' + str(step)})
@@ -444,23 +509,31 @@ class QuerySet(object):
         return self.update({key: key + '-' + str(step)})
 
     def query(self, sql):
-        count, ret, _ = self.__conn.execute(sql)
+        count, ret, _ = self.__conn__().execute(sql)
         return ret
 
+    """
+    事务操作
+    """
     @staticmethod
     def start_trans():
-        """开启事务"""
-        Connection.get_connect().start_trans()
+        Connection.connect(def_name).start_trans()
 
     @staticmethod
     def commit():
-        """提交事务"""
-        Connection.get_connect().commit()
+        Connection.connect(def_name).commit()
 
     @staticmethod
     def rollback():
-        """回滚事务"""
-        Connection.get_connect().rollback()
+        Connection.connect(def_name).rollback()
+
+    @staticmethod
+    def transaction(name=def_name):
+        return Transaction(name)
+
+    def select_for_update(self, sql="FOR UPDATE"):
+        self.__for_update = sql
+        return self
 
     def __complement_table_name(self, name:str):
         pre_len = len(self.prefix)
@@ -479,19 +552,19 @@ class QuerySet(object):
             count, list_data, field_info = cache_data
         else:
             sql = "SHOW FULL COLUMNS FROM `{}`".format(table)
-            count, list_data, field_info = self.__conn.execute_all(sql)
+            count, list_data, field_info = self.__conn__().execute_all(sql)
             self.__set_cache(ck, (count, list_data, field_info))
 
+        def field_to_dict(it, table=None):
+            f = it['Field']
+            field_name = f if table is None else "{}.{} AS {}__{}".format(table, f, table, f)
+            field_as = f if table is None else "{}__{}".format(table, f)
+            return {'field': field_name, 'field_as': field_as, 'field_': f, 'type': it['Type'], 'key': it['Key']}
+
         if full_name:
-            all_column = list([{'field': "{}.{} AS {}__{}".format(table, item[0], table, item[0]),
-                                'field_as': "{}__{}".format(table, item[0]),
-                                'field_': item[0],
-                                'type': item[1], 'key': item[4]} for item in list_data])
+            all_column = list([field_to_dict(it, table) for it in list_data])
         else:
-            all_column = list([{'field': item[0],
-                                'field_as': item[0],
-                                'field_': item[0],
-                                'type': item[1], 'key': item[4]} for item in list_data])
+            all_column = list([field_to_dict(it) for it in list_data])
 
         if conv is str:
             return ','.join([it['field'] for it in all_column])
@@ -542,7 +615,3 @@ class QuerySet(object):
         }
         self.__column_cache__[ck] = item
         return item['data']
-
-
-class Db(QuerySet):
-    """"""

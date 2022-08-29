@@ -1,24 +1,35 @@
-import signal, logging
+import signal, logging, mimetypes
 import importlib, time, os, inspect
-import json, mimetypes
-from typing import Optional, Awaitable
+from typing import Optional, Awaitable, Any
 from concurrent.futures import ThreadPoolExecutor
 
-import config
 import tornado
-from tornado import web
+from tornado import web, httputil
 from tornado.concurrent import run_on_executor
+
+import quickpython
 from .exception import *
-from .contain.controller import Controller
+from .contain import Controller, Request, HandlerHelper
 from .settings import SETTINGS
+from quickpython.component.function import *
+from quickpython.component.result import Result
+from quickpython.config import Config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+encoding = SETTINGS['encoding']
+DS = r"/"
 
 
-class ProcessorController(web.RequestHandler):
+class ProcessorHandler(web.RequestHandler):
 
-    executor = ThreadPoolExecutor(max_workers=config.Config.web_thr_count(SETTINGS['pro_thr_num']))
+    executor = ThreadPoolExecutor(max_workers=Config.web_thr_count(SETTINGS['pro_thr_num']))
+
+    def __init__(self, application: "Application", request: httputil.HTTPServerRequest, **kwargs: Any):
+        super().__init__(application, Request(request), **kwargs)
+        self.params = {}        # 收集到的请求参数
+        self.path = '/'         # 请求路径
+        self.path_arr = []      # 请求路径分割数组
 
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
         pass
@@ -30,7 +41,7 @@ class ProcessorController(web.RequestHandler):
         if resp_content is True:
             self.finish()
             return
-        if self.response_write(resp_content) is False:
+        if self.response_write(resp_content) is False:  # =False是未处理
             self.finish()
             return
 
@@ -39,80 +50,51 @@ class ProcessorController(web.RequestHandler):
         self.request.method = 'POST'
         resp_content = yield self._dispose(*args)
         if resp_content is True:
-            # self.finish()
-            return
-        if self.response_write(resp_content) is False:
             self.finish()
             return
-
-    def return_file(self, path):
-        """
-        如果是文件且存在就处理
-        PS: http://127.0.0.1:8107/static/assets/img/logo.png
-        """
-        file_path = "{}{}".format(SETTINGS['static_path'], path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            mime = mimetypes.guess_type(file_path)
-            self.set_header('Content-Type', mime[0])
-            self.set_header('cache-control', "max-age={}".format(SETTINGS.get('resource_max_age', 86400)))
-            # 开启此选项浏览器回直接下载文件
-            # self.set_header('Content-Disposition', 'attachment; filename=' + os.path.basename(file_path))
-            buf_size = 1024 * 1024 * 10
-            with open(file_path, 'rb') as f:
-                while True:
-                    data = f.read(buf_size)
-                    if not data:
-                        break
-                    self.write(data)
-
-            return True
-
-        return False
+        if self.response_write(resp_content) is False:  # =False是未处理
+            self.finish()
+            return
 
     @run_on_executor
     def _dispose(self, *args):
         try:
             # 初始数据
             self._on_mtime = int(time.time() * 1000)
-            self._is_finish = False
-            # 请求信息
-            request = self.request
-            request.method = 'POST' if hasattr(self, 'method') is None else request.method
-            logger.debug("method={}, args={}".format(request.method, args))
-            remote_ip = request.remote_ip
-            path = self.path = self.request.path
-            path = path.replace("//", "/")
-            path_arr = self.path_arr = [] if path == '/' else path.split('/')
-            # 是否是ajax请求
-            self.request.is_ajax = True if request.headers.get('x-requested-with') == 'XMLHttpRequest' else False
-            # 是否是资源文件下载
-            if self.return_file(path):
+            self._is_finish = False         # 请求是否结束
+            self._is_res_request = False    # 是否是资源请求
+            # 请求处理
+            HandlerHelper.before(self)
+            logger.debug("method={}, args={}".format(self.request.method, args))
+            # 是否是资源文件下载（需要对upload进行鉴权处理
+            if HandlerHelper.return_file(self, self.path):
+                self._is_res_request = True
                 return True
             # 收集请求参数
-            params = self.params = {}
-            for key in request.arguments:
-                self.params[key] = self.get_argument(key)
-            logger.debug("path={}, params={}".format(path, params))
-
+            params = self.params = HandlerHelper.parse_params(self)
+            logger.debug("path={}, params={}".format(self.path, params))
             # 寻找控制器
-            controller, controller_action = self.load_controller_action(self, path, path_arr)
-            controller.__initialize_request__(path, params, request)
+            controller, controller_action = self.find_controller_action(self, self.path, self.path_arr)
+            controller.__initialize_request__(self.path, params, self.request)
 
             # 执行控制器方法
             # hooker.trigger('request_before', controller)
             ret = controller_action()
             # hooker.trigger('request_after', controller)
+
             return "None" if ret is None else ret
 
         except ResponseException as e:
             return e
-
+        except tornado.template.ParseError as e:
+            logger.exception(e)
+            return ResponseException("页面模板异常：{}".format(str(e)), code=500)
         except BaseException as e:
             logging.exception(e)
-            return "请求异常：{}".format(e)
-
+            return "系统异常：{}".format(e)
         finally:
-            logging.info("{} {} {}ms".format(self.get_status(), self.request.path, int(time.time() * 1000) - self._on_mtime))
+            if self._is_res_request is False:       # 只记录控制器日志
+                logging.info("{} {} {}ms".format(self.get_status(), self.request.path, int(time.time() * 1000) - self._on_mtime))
 
     MODULES = {}
 
@@ -176,19 +158,13 @@ class ProcessorController(web.RequestHandler):
 
     @classmethod
     def scan_dir(cls, path):
-        ret = []
-        for it in os.listdir(path):
-            if it[2:] != '__':
-                ret.append(it)
+        ret = list(filter(lambda x: os.path.isdir(path + DS + x) and x.find('__') == -1, os.listdir(path)))
         ret.sort()
         return ret
 
     @classmethod
     def scan_file(cls, path):
-        ret = []
-        for it in os.listdir(path):
-            if it[:1] != '_':
-                ret.append(it)
+        ret = list(filter(lambda x: os.path.isfile(path + DS + x) and x.find('__') == -1, os.listdir(path)))
         ret.sort()
         return ret
 
@@ -201,7 +177,7 @@ class ProcessorController(web.RequestHandler):
         return ret
 
     @classmethod
-    def load_controller_action(cls, pro_obj, path, path_arr):
+    def find_controller_action(cls, pro_obj, path, path_arr):
         """找到对应控制器和方法"""
         pa = path_arr[1:] if len(path_arr) > 0 and path_arr[0] == '' else path_arr
         if len(pa) == 0 or pa[0] == '':
@@ -215,11 +191,13 @@ class ProcessorController(web.RequestHandler):
         logger.debug("path_arr={} -> pa={}".format(path_arr, pa))
 
         cls.load_module()
+        url_html = SETTINGS['url_html']
 
         module, controller, action = pa[0], '.'.join(pa[1:-1]), pa[-1]
-        module, controller, action = module.lower(), controller.lower(), action.lower()
+        module, controller, action = module.lower(), controller.lower(), action
         if module in cls.MODULES:
             if controller in cls.MODULES[module]:
+                action = action.replace(url_html, '')
                 if action in cls.MODULES[module][controller]['m']:
                     obj = cls.MODULES[module][controller]['obj']
                     obj = obj.__class__()
@@ -233,32 +211,42 @@ class ProcessorController(web.RequestHandler):
             raise ResponseNotFoundException("模块不存在：{}".format(module))
 
     def response_write(self, ret, status_code=200):
+        return self._response_write(ret, status_code)
+
+    def _response_write(self, ret, status_code=200):
         """返回结果统一处理"""
         # headers
         self.set_status(status_code)
-        self.set_header('Server', 'quickpython-1.05')
+        self.set_header('Server', quickpython.name + '-' + quickpython.version)
         self.set_header('Accept-Language', 'zh-CN,zh;q=0.9')
-        self.set_header('Content-Type', 'text/html; charset={}'.format(SETTINGS['encoding']))
-
+        # 分别处理
         if isinstance(ret, ResponseRenderException):
-            return self.render(template_name=ret.tpl_name, **ret.data)
-        if isinstance(ret, ResponseNotFoundException):
-            status_code = 404
-            ret = ret.text
-        if isinstance(ret, ResponseTextException):
-            ret = ret.text
+            try:
+                return self.render(template_name=ret.tpl_name, **ret.data)
+            except BaseException as e:
+                logger.exception(e)
+                ret = ResponseException("页面异常：{}".format(str(e)), code=500)
+                return HandlerHelper.return_response(self, ret)
+        elif isinstance(ret, ResponseFileException):
+            return HandlerHelper.return_file(self, ret.file, ret.mime)
+        elif isinstance(ret, ResponseException):
+            return HandlerHelper.return_response(self, ret)
+        elif isinstance(ret, AppException):
+            status_code = 500
+            ret = str(ret)
 
         self.set_status(status_code)
         # 返回json
         request_type = self.request.headers.get("Content-Type", '').lower()
         if request_type == 'application/json' or self.request.is_ajax:
-            self.set_header('Content-Type', 'application/json')
-            ret = ret if isinstance(ret, Result) else Result.success(ret)
+            self.set_header('Content-Type', 'application/json; charset={}'.format(encoding))
+            ret = ret if isinstance(ret, Result) else Result.result(status_code, ret, None)
             self.write(str(ret))
             return True
 
         # 返回html
         if self._is_finish is False:
+            self.set_header('Content-Type', 'text/html; charset={}'.format(encoding))
             self.write(str(ret))
             return True
 
@@ -266,28 +254,3 @@ class ProcessorController(web.RequestHandler):
 
     def on_finish(self):
         self._is_finish = True
-
-
-class Result(object):
-
-    def __init__(self, code=200, msg="SUCCESS", data=None):
-        self.code = code
-        self.msg = msg
-        self.data = data
-
-    def __str__(self):
-        ret = {'code': self.code, 'msg': self.msg, 'data': self.data}
-        return json.dumps(ret, indent=99)
-
-    @staticmethod
-    def success(data=None, msg="SUCCESS"):
-        return Result.result(200, msg, data)
-
-    @staticmethod
-    def error(msg="ERROR", code=500):
-        return Result.result(code, msg, None)
-
-    @staticmethod
-    def result(code, msg, data):
-        return Result(code, msg, data)
-

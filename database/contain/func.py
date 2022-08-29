@@ -2,12 +2,14 @@
     助手方法
 """
 import importlib
-import types
+import types, time
 from inspect import isfunction
 
 
 def empty(obj):
     if obj is None:
+        return True
+    elif hasattr(obj, '__len__') and len(obj) == 0:
         return True
     elif isinstance(obj, int) and obj == 0:
         return True
@@ -24,9 +26,37 @@ def not_empty(obj):
     return empty(obj) is False
 
 
+def empty_val(obj, def_val):
+    """不等于空赋值def_val"""
+    return None if empty(obj) else def_val
+
+
+def halt(condition, msg):
+    if condition:
+        raise Exception(msg)
+
+
 def load_cls(cls_path, **kwargs):
     model_path, cls_name = cls_path.rsplit(".", 1)
     module = importlib.import_module(model_path)
     cls = getattr(module, cls_name)
     return cls
 
+
+def local_get(local, name, def_val=None):
+    if hasattr(local, name) and not_empty(local.__getattribute__(name)):
+        return local.__getattribute__(name)
+    return def_val
+
+
+def local_set(local, name, data):
+    local.__setattr__(name, data)
+
+
+def get_thr_id():
+    import threading
+    return threading.current_thread().ident
+
+
+def get_mtime():
+    return int(time.time() * 1000)

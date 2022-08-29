@@ -4,9 +4,9 @@
 import time
 
 from ..contain.func import *
-from .. import setttings
+from .. import settings
 
-options = setttings.DATABASES['default']['options']
+options = settings.DATABASES['default']['options']
 
 
 class ColumnCmp:
@@ -43,34 +43,36 @@ class ColumnBase:
         if primary_key:
             self.nullable = False       # 主键禁止为空
 
-        # self.default = kwargs.pop("default", None)
         self.insert_default = kwargs.pop("insert_default", None)
         self.update_default = kwargs.pop("update_default", None)
+        self.default = kwargs.pop("default", None)  # 查询、新增时数据为空时的默认值
 
         self.comment = kwargs.pop("comment", None)  # 字段备注
         self.proxies = kwargs.pop("proxies", None)  # 字段前缀
+        self.soft = kwargs.pop("soft", False)  # 软删除字段
 
-        self.value = kwargs.pop("value", None)   # 字段数据
+        self.value = kwargs.pop("value", self.default)
 
     def has_insert_default(self):
         return (
-            self.insert_default is not None
+            self.default
+            or self.insert_default is not None
             or self.update_default is not None
         )
 
     def has_update_default(self):
         return (
-            self.update_default is not None
+            self.default
+            or self.update_default is not None
         )
 
     def __get_insert_default__(self):
-        val = None
-        if self.insert_default is not None:
+        val = self.default
+        if val is None and self.insert_default is not None:
             if isfunction(self.insert_default):
                 val = self.insert_default()
             else:
                 val = self.insert_default
-
         if val is None and self.update_default is not None:
             if isfunction(self.update_default):
                 val = self.update_default()
@@ -79,7 +81,7 @@ class ColumnBase:
         return val
 
     def __get_update_default__(self):
-        val = None
+        val = self.default
         if val is None and self.update_default is not None:
             if isfunction(self.update_default):
                 val = self.update_default()
@@ -180,23 +182,44 @@ field_map = {
 
 
 """
-    字段扩展方法
+    字段方法
 """
 
 
 class ColumnFunc:
 
-    @staticmethod
-    def now():
-        import datetime
-        fmt = "%Y-%m-%d %H:%M:%S"
-        if hasattr(options, 'datetime_fmt') and not_empty(options['datetime_fmt']):
-            fmt = options['datetime_fmt']
-        return datetime.datetime.now().strftime(fmt)
+    class Functions:
 
-    @staticmethod
-    def now_timestamp():
-        return int(time.time())
+        @staticmethod
+        def now():
+            now = ColumnFunc.Functions.__env_datetime_now__()
+            if now is not None:
+                return now
+
+            import datetime
+            fmt = "%Y-%m-%d %H:%M:%S"
+            if hasattr(options, 'datetime_fmt') and not_empty(options['datetime_fmt']):
+                fmt = options['datetime_fmt']
+            return datetime.datetime.now().strftime(fmt)
+
+        @staticmethod
+        def __env_datetime_now__():
+            """指定了环境时间"""
+            try:
+                from quickpython.component import env
+                return env.get(env.DATETIME_NOW)
+            except:
+                return None
+
+        @staticmethod
+        def now_timestamp():
+            return int(time.time())
+
+    """
+    方法做常量宏
+    """
+    now = Functions.now
+    now_timestamp = Functions.now_timestamp
 
 
 def iscolumn(cls):

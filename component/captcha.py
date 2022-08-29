@@ -1,26 +1,32 @@
-"""
-    python-quick-captcha 1.0
-"""
 import logging, random, os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
+CACHE_NAME = "__CAPTCHA_CACHE__"
 
-class Captcha:
 
-    # @staticmethod
-    # def out(request):
-    #     from django.shortcuts import HttpResponse
-    #     event = request.GET.get("event", 'default')
-    #     image_data, code = Captcha.generate()
-    #     request.session['_captcha_' + event] = code
-    #     return HttpResponse(image_data, content_type="image/png")
+class Captcha(object):
+
+    @staticmethod
+    def out_django(request):
+        from django.shortcuts import HttpResponse
+        event = request.GET.get("event", 'default')
+        image_data, code = Captcha.generate()
+        request.session[CACHE_NAME + event] = code
+        return HttpResponse(image_data, content_type="image/png")
+
+    @staticmethod
+    def out_toranado(request, event='default'):
+        from quickpython.server.exception import ResponseFileException
+        image_data, code = Captcha.generate()
+        request.session[CACHE_NAME + event] = code
+        return ResponseFileException(image_data, "image/png")
 
     @staticmethod
     def verify(request, text=None, event='default'):
-        true_val = request.session.get('_captcha_' + event)
+        true_val = request.session.get(CACHE_NAME + event)
+        del request.session[CACHE_NAME + event]       # 每次验证后都要求刷新验证码
         if text is None or event is None or true_val is None:
             return False
-        request.session['_captcha_' + event] = None       # 每次验证后都要求刷新验证码
         return str(text).lower() == str(true_val).lower()
 
     @staticmethod
@@ -31,11 +37,11 @@ class Captcha:
             begin = (random.randint(0, width), random.randint(0, height))
             end = (random.randint(0, width), random.randint(0, height))
             # 在图像上画线，参数值为线的起始和终止位置坐标[(x, y), (x, y)]和线的填充颜色
-            draw.line([begin, end], fill=linecolor, width=2)
+            draw.line([begin, end], fill=linecolor, width=3)
 
         # 生成验证码
-        def gene_code(size, font_count, font_color, line_color):
-            font_path = '{}/font.ttf'.format(os.path.dirname(os.path.abspath(__file__)))
+        def gene_code(size, font_count, font_color):
+            font_path = '{}/captcha_font.ttf'.format(os.path.dirname(os.path.abspath(__file__)))
             # 宽和高
             width, height = size
             # 创建图片, 'RGBA'表示4*8位像素，真彩+透明通道
@@ -55,9 +61,9 @@ class Captcha:
             # 画线的条数
             line_count = random.randint(2, 4)
             for i in range(line_count):
-                gene_line(draw, width, height, line_color)
+                gene_line(draw, width, height, font_color)
             # 滤镜，边界加强，ImageFilter.EDGE_ENHANCE_MORE为深度边缘增强滤波，会使得图像中边缘部分更加明显。
-            image = image.filter(ImageFilter.EDGE_ENHANCE_MORE)
+            # image = image.where(ImageFilter.EDGE_ENHANCE_MORE)
             # 保存验证码图片
             # image.save('idencode.png')
 
@@ -69,5 +75,4 @@ class Captcha:
         # TODO::调用生成
         size = (120, 50)        # 生成验证码图片的高度和宽度
         font_color = (0, 0, 255)     # 字体颜色，默认为蓝色
-        line_color = (100, 100, 255)     # 线颜色，默认为蓝色
-        return gene_code(size, 5, font_color, line_color)
+        return gene_code(size, 5, font_color)

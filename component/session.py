@@ -6,11 +6,12 @@
 """
 import os, time
 from hashlib import sha1
-from quickpython.component.env import env
+from quickpython.component import env, cache
+
+CACHE_NAME = "__SESSION_CACHE__"
 
 
 class Session2:
-
     def __init__(self, sess_id):
         self.id = sess_id
 
@@ -18,46 +19,54 @@ class Session2:
 class Session:
 
     name = env.get('session.name', 'qp_session')
-    expire = env.get('session.expire', 60)
-
-    _CACHE = {
-        # session_id: {}
-    }
+    expire = env.get('session.expire', 86400 * 7)
 
     def __init__(self, handler, session_name=None):
-        self.handler = handler
         self.name = self.name if session_name is None else session_name
-        self.sess_id = self.handler.get_cookie(self.name)
-        if self.sess_id is None:
+        self.sess_id = handler.get_cookie(self.name)
+        self.__data = None
+        if self.sess_id is None or len(self.sess_id) <= 16:
             self.sess_id = self._gen_session_id()
-            self._CACHE[self.sess_id] = {}
-            self.handler.set_cookie(self.name, self.sess_id, max_age=self.expire)
+            self.__data = {}
+            cache.set(self._cache_name, {}, self.expire)
+            handler.set_cookie(self.name, self.sess_id, max_age=self.expire)
+        else:
+            self.__data = cache.get(self._cache_name, {}, self.expire)
 
     @classmethod
     def _gen_session_id(cls):
         return sha1(bytes('%s%s' % (time.time(), os.urandom(32)), encoding='utf-8')).hexdigest()
 
     def __getitem__(self, item):
-        return self._CACHE[self.sess_id].get(item)
+        return self.get(item)
 
     def __setitem__(self, key, value):
-        self._CACHE[self.sess_id][key] = value
+        return self.set(key, value)
 
     def __delitem__(self, key):
-        if key in self._CACHE[self.sess_id]:
-            del self._CACHE[self.sess_id][key]
+        return self.delete(key)
 
     def get(self, key, def_val=None):
-        if self.sess_id in self._CACHE:
-            return self._CACHE[self.sess_id].get(key, def_val)
-        return def_val
+        return self.__data.get(key, def_val)
 
     def set(self, key, val):
-        if self.sess_id not in self._CACHE:
-            self._CACHE[self.sess_id] = {}
-        self._CACHE[self.sess_id][key] = val
+        if val is None:
+            return self.delete(key)
+        self.__data[key] = val
+        self._data_save()
 
-    def delete(self):
-        """从大字典删除session_id"""
-        del self._CACHE[self.sess_id]
+    def delete(self, key):
+        if key in self.__data:
+            del self.__data[key]
+            self._data_save()
 
+    def destroy(self):
+        self.__data = {}
+        cache.delete(self._cache_name)
+
+    def _data_save(self):
+        cache.set(self._cache_name, self.__data, True)
+
+    @property
+    def _cache_name(self):
+        return CACHE_NAME + self.sess_id

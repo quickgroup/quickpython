@@ -5,9 +5,11 @@ from quickpython.config import Config, env
 # app配置
 SETTINGS = {
     'debug': env.get('app.debug', False),
-    'port': env.get('app.port', False),
+    'port': env.get('app.port', 32000),
+    'version': '0.2.1',
     'template_path': 'app',
-    'static_path': 'public',
+    'public_path': 'public',
+    'static_path': 'public/static',
     'ui_methods': functions,
     'pro_thr_num': None,        # 默认是CPU核心数的线程数量
     # 环境配置
@@ -20,6 +22,7 @@ SETTINGS = {
     'default_action': 'index',
     'url_convert': True,    # 自动转换为控制器方法
     'url_route_on': False,
+    'url_html': '.html',
     # 模板配置
     'template': {
         'view_path': '',
@@ -63,7 +66,11 @@ LOGGING = {
 }
 
 # 路由
-from .processor import ProcessorController
+from .processor import ProcessorHandler
 ROUTES = [
-    (r"/(.*)", ProcessorController),    # 默认处理控制器
+    (r"/(.*)", ProcessorHandler),    # 默认处理控制器
 ]
+
+# TODO::将配置加载到env
+for it, val in SESSIONS.items():
+    env.set(it, val)

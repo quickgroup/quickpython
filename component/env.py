@@ -7,6 +7,9 @@ import os, logging
 
 class Env:
 
+    DATETIME_NOW = '__ENV_DATETIME_NOW__'
+    DATETIME_TIME_NOW = '__ENV_DATETIME_TIME_NOW__'
+
     def __init__(self, env_path=".env", encoding="utf-8"):
         self.env_path = env_path
         self.encoding = encoding
@@ -58,7 +61,7 @@ class Env:
         else:
             os.environ.setdefault(k, '')
 
-    def get(self, key:str, def_val=None):
+    def get(self, key: str, def_val=None):
         if key.find(".") > -1:
             key1, key2 = tuple(key.split("."))
             if key1 not in self._DATA:

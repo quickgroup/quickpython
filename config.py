@@ -1,74 +1,70 @@
-import os, logging, urllib3, threading, datetime
+import os, logging, urllib3, sys
+import threading
 from multiprocessing import cpu_count
-from logging.handlers import TimedRotatingFileHandler
 from quickpython.component.env import env
+from quickpython.component.log import LoggingManger
 
 logger = logging.getLogger(__name__)
 # 屏蔽ssl警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+ROOT_PATH = str(os.getcwd()).replace('\\', '/')
+APP_PATH = str(os.getcwd()).replace('\\', '/') + '/app'
+CACHE_PATH = ROOT_PATH + '/cache'       # cache目录
+LOG_DIR = ROOT_PATH + '/cache/logs'   # 日志目录
+DATA_PATH = ROOT_PATH + '/data'         # 数据目录
+PUBLIC_PATH = ROOT_PATH + '/public'     # 资源目录
+UPLOADS_PATH = ROOT_PATH + '/public/uploads'    # 上传目录
+
+env.set('ROOT_PATH', ROOT_PATH)
+env.set('APP_PATH', APP_PATH)
+env.set('CACHE_PATH', CACHE_PATH)
+env.set('LOG_DIR', LOG_DIR)
+env.set('DATA_PATH', DATA_PATH)
+env.set('PUBLIC_PATH', PUBLIC_PATH)
+env.set('UPLOADS_PATH', UPLOADS_PATH)
+
 
 class Config:
 
-    APP = 'app'     # 应用目录
-    MODE = None     # 运行模式：web、cmd
-    DEBUG = True
-    ROOT_PATH = str(os.getcwd()).replace('\\', '/')
+    DEBUG = env.get("app.debug", False)
+    IS_WIN32 = sys.platform == "win32"
 
-    #
+    # 运行模式
+    MODE = None     # 运行模式：web、cmd
     MODE_WEB = "WEB"
     MODE_CMD = "CMD"
 
     # 目录
-    CACHE_PATH = ROOT_PATH + '/cache'       # cache目录
-    DATA_PATH = ROOT_PATH + '/data'         # 数据目录
-    LOGS_PATH = ROOT_PATH + '/cache/logs'   # 日志目录
-    PUBLIC_PATH = ROOT_PATH + '/public'     # 资源目录
-    UPLOADS_PATH = ROOT_PATH + '/public/uploads'    # 上传目录
-    DIRS = [CACHE_PATH, LOGS_PATH, DATA_PATH, UPLOADS_PATH]
+    ROOT_PATH = ROOT_PATH
+    APP_PATH = APP_PATH
+    CACHE_PATH = CACHE_PATH
+    LOG_DIR = LOG_DIR
+    DATA_PATH = DATA_PATH
+    PUBLIC_PATH = PUBLIC_PATH
+    UPLOADS_PATH = UPLOADS_PATH
+
+    # 线程数据
+    _local = threading.local()
 
     @classmethod
     def init(cls, mode):
         cls.MODE = str(mode).upper()
-        cls.logging_init()
-        for dir_it in cls.DIRS:
-            if os.path.exists(dir_it) is False:
-                logger.info('创建目录：{}'.format(dir_it))
-                os.makedirs(dir_it)
-
-    @staticmethod
-    def is_debug():
-        return env.get("app.debug", False)
+        env.set('mode', cls.MODE)
+        cls.dirs_init()
+        LoggingManger.init(LOG_DIR, cls.MODE, cls.DEBUG)
 
     @classmethod
-    def logging_init(cls):
-        """初始化日志模块"""
-        logging.getLogger("matplotlib").setLevel(logging.WARNING)
-        logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-        # 控制台
-        console_handler = logging.StreamHandler()
-        # 文件
-        encoding = env.get("encoding", "UTF-8")
-        file_path = '{}/{}'.format(cls.LOGS_PATH, cls.get_log_file_name())
-        file_handler = TimedRotatingFileHandler(file_path, when='D', backupCount=33, encoding=encoding)
-        file_handler.setLevel(logging.DEBUG)
-        # 全局
-        formatter_str = '%(asctime)s %(levelname)s [%(filename)s:%(funcName)s:%(lineno)d]\t%(message)s'
-        level = logging.DEBUG if cls.is_debug() else logging.INFO
-        logging.basicConfig(format=formatter_str, level=level, handlers=[console_handler, file_handler])
+    def dirs_init(cls):
+        DIRS = [CACHE_PATH, LOG_DIR, DATA_PATH, UPLOADS_PATH]
+        for it in DIRS:
+            if os.path.exists(it) is False:
+                logger.info('创建目录：{}'.format(it))
+                os.makedirs(it)
 
-    # env环境变量
     @staticmethod
-    def env_get(key, default=None):
-        val = env.get(key)
-        if val == "true":
-            val = True
-        elif val == "false":
-            val = False
-
-        if val is None and default is not None:
-            return default
-        return val
+    def get(key, def_val=None):
+        return env.get(key, def_val)
 
     @staticmethod
     def env_get_int(key, default=None):
@@ -84,12 +80,6 @@ class Config:
         return logging.getLogger(name)
 
     @classmethod
-    def get_log_file_name(cls):
-        if cls.MODE == cls.MODE_CMD:
-            return "{}_{}.log".format(cls.MODE_CMD.lower(), datetime.datetime.now().strftime("%Y-%m-%d"))
-        return "{}.log".format(cls.MODE_CMD.lower())
-
-    @classmethod
     def web_pro_count(cls, num=None):
         return cpu_count() if num is None else num
 
@@ -99,3 +89,12 @@ class Config:
         # thr_num = 4 if cls.is_debug() else thr_num
         return 4
 
+    @classmethod
+    def local_set(cls, name, val):
+        cls._local.__setattr__(name, val)
+
+    @classmethod
+    def local_get(cls, name, def_val=None):
+        if hasattr(cls._local, name):
+            return cls._local.__getattribute__(name)
+        return def_val

@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="quickpython-mvc",
-    version="0.1.2",
+    version="0.1.3",
     keywords=["quickpython-mvc", "quickpython", "quick", "WEB", "database", "MVC"],  # 关键字
     description="Python rapid development framework .",
     long_description="Python rapid development framework ",
@@ -17,6 +17,8 @@ setup(
 
     packages=find_packages(),
     include_package_data=True,
+    scripts=['./boot.py', './config.py', './README.md', './requirements.txt'],
     platforms="any",
-    install_requires=["tornado", "pymysql"]
+    install_requires=["tornado", "pymysql"],
+    extras_require={':python_version <= "3.6"': ['enum34', 'future']}
 )
