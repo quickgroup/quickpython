@@ -118,7 +118,7 @@ class QuerySet(object):
         """sql中的表名，识别并增加别名"""
         if empty(self.prefix):
             return format_field(self.__table__)
-        table_name = "{}{}".format(format_field(self.__table__), format_field(self.__table))
+        table_name = "{} {}".format(format_field(self.__table__), format_field(self.__table))
         return table_name
 
     def where(self, field, op=None, condition=None):
