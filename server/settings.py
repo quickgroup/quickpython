@@ -51,7 +51,7 @@ SETTINGS = {
 
 # 缓存设置
 CACHE = {
-    'type': "redis",   # 缓存类型：memory=内存、file=文件、redis=redis方式
+    'type': "memory",   # 缓存类型：memory=内存、file=文件、redis=redis方式
     'timeout': 1800,    # 默认过期时间
 }
 
