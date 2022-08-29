@@ -1,5 +1,4 @@
-import quickpython.component.function as functions
-from quickpython.config import Config, env
+from quickpython.config import env
 
 
 # app配置
@@ -10,7 +9,6 @@ SETTINGS = {
     'template_path': 'app',
     'public_path': 'public',
     'static_path': 'public/static',
-    'ui_methods': functions,
     'pro_thr_num': None,        # 默认是CPU核心数的线程数量
     # 环境配置
     'lang': 'zh-cn',
@@ -49,6 +47,12 @@ SETTINGS = {
     },
     #
     'resource_max_age': 86400,
+}
+
+# 缓存设置
+CACHE = {
+    'type': "memory",   # 缓存类型：memory=内存、file=文件、redis=redis方式
+    'timeout': 1800,    # 默认过期时间
 }
 
 # session配置

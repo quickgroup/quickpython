@@ -83,10 +83,12 @@ class Core:
         settings = {
             # 'debug': SETTINGS['debug'],
         }
+        # 常用方法
+        import quickpython.component.function as functions
         # 实例化应用
         application = tornado.web.Application(ROUTES, **{
             'template_path': SETTINGS['template_path'],
-            'ui_methods': SETTINGS['ui_methods'],
+            'ui_methods': functions,
         }, **settings)
         # 启动web
         server = cls.server = tornado.web.HTTPServer(application, decompress_request=True)

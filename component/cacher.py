@@ -296,14 +296,14 @@ class QPMemoryCache(CacherBase):
             self._write_data(data)
 
 
-CACHE_TYPE = 'REDIS'     # 引擎类型
-
-
 class QPCache(CacherBase):
 
     __ENGINE_MAP__ = {}
 
-    def __init__(self, name='default', type_=CACHE_TYPE):
+    def __init__(self, name='default', type_=None):
+        if type_ is None:
+            from quickpython.server.settings import CACHE
+            type_ = CACHE.get('type', 'memory')
         if name not in self.__ENGINE_MAP__:
             self.__ENGINE_MAP__[name] = self.__load_engine(type_)
         self._target = self.__ENGINE_MAP__[name]
