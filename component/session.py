@@ -6,7 +6,7 @@
 """
 import os, time
 from hashlib import sha1
-from quickpython.component import env, cache
+from quickpython.component.cacher import env, cache
 
 CACHE_NAME = "__SESSION_CACHE__"
 
