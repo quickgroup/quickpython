@@ -167,7 +167,10 @@ class QPRedisCache(CacherBase):
     PREFIX = ""
 
     def __init__(self):
-        from redis import Redis, ConnectionPool
+        try:
+            from redis import Redis, ConnectionPool
+        except:
+            raise Exception("缺少redis包，请执行安装命令：pip3 install redis")
         pool = ConnectionPool(host=self.HOST, port=self.PORT, password=self.PASSWORD, db=self.DATABASE, decode_responses=True)
         conn = Redis(connection_pool=pool)
         self.__conn = conn
@@ -301,8 +304,9 @@ class QPCache(CacherBase):
     __ENGINE_MAP__ = {}
 
     def __init__(self, name='default', type_=None):
+        from quickpython.server.settings import CACHE
+        CacherBase.TIMEOUT = CACHE.get('timeout', CacherBase.TIMEOUT)
         if type_ is None:
-            from quickpython.server.settings import CACHE
             type_ = CACHE.get('type', 'memory')
         if name not in self.__ENGINE_MAP__:
             self.__ENGINE_MAP__[name] = self.__load_engine(type_)
