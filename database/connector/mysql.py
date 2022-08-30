@@ -55,7 +55,6 @@ class MysqlConnector(Connector):
         return conn
 
     def _autocommit(self, x):
-        log.debug("设置底层连接事务状态")
         self.__conn__().autocommit(x)     # 设置底层连接事务状态
 
     def _get_cursor(self):
