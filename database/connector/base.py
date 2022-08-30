@@ -74,8 +74,7 @@ class Connector:
         self._cursor = None    # 连接游标
         self._thr_id = get_thr_id()
         self._expire_time = int(time.time()) + self.get_config('wait_timeout')  # 超时时间
-        # 此处autocommit存在循环调用问题
-        self.autocommit(True)
+        self.autocommit(True)       # 此处autocommit在设置_expire_time后执行存在循环调用问题
 
     def __conn__(self):
         self._check_connection_timeout()

@@ -189,8 +189,8 @@ class DemoModel:
         """测试事务"""
 
         conn = UserModel().__query__.connect()
-        time.sleep(3)
-        conn.autocommit(False)
+        time.sleep(6)
+        conn.autocommit(True)
         return
 
         from decimal import Decimal
