@@ -21,10 +21,10 @@ class DemoModel:
         # self.aggregation()
         # self.field_use()
         # join
-        self.join_1()
+        # self.join_1()
         # self.join_2()
         # tran
-        # self.tran2()
+        self.tran2()
         # self.thread()
         # connection
         # self.connection()
@@ -187,6 +187,12 @@ class DemoModel:
 
     def tran2(self):
         """测试事务"""
+
+        conn = UserModel().__query__.connect()
+        time.sleep(3)
+        conn.autocommit(False)
+        return
+
         from decimal import Decimal
         try:
             with Transaction():

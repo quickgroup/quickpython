@@ -34,7 +34,7 @@ class Connector:
         self.name = name
         self.config = self.load_config(config)
         self.log = log
-        self.__conn = None      # 数据库连接，子类不能直接访问
+        self.__conn = None      # 数据库底层连接，子类不能直接访问
         self._cursor = None    # 连接游标
         self._thr_id = get_thr_id()
         self._autocommit_of = True   # 自动提交（False表示在事务中
@@ -73,8 +73,9 @@ class Connector:
         self.__conn = conn      # 数据库连接
         self._cursor = None    # 连接游标
         self._thr_id = get_thr_id()
-        self.autocommit(True)
         self._expire_time = int(time.time()) + self.get_config('wait_timeout')  # 超时时间
+        # 此处autocommit存在循环调用问题
+        self.autocommit(True)
 
     def __conn__(self):
         self._check_connection_timeout()
