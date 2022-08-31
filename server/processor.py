@@ -8,22 +8,21 @@ from tornado import web, httputil
 from tornado.concurrent import run_on_executor
 
 import quickpython
-from .exception import *
-from .contain import Controller, Request, HandlerHelper
-from .settings import SETTINGS
+from quickpython.server import Config
 from quickpython.component.function import *
 from quickpython.component.result import Result
-from quickpython.config import Config
+from .exception import *
+from .contain import Controller, Request, HandlerHelper
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-encoding = SETTINGS['encoding']
+encoding = Config.SETTINGS['encoding']
 DS = r"/"
 
 
 class ProcessorHandler(web.RequestHandler):
 
-    executor = ThreadPoolExecutor(max_workers=Config.web_thr_count(SETTINGS['pro_thr_num']))
+    executor = ThreadPoolExecutor(max_workers=Config.web_thr_count(Config.SETTINGS['pro_thr_num']))
 
     def __init__(self, application: "Application", request: httputil.HTTPServerRequest, **kwargs: Any):
         super().__init__(application, Request(request), **kwargs)
@@ -191,7 +190,7 @@ class ProcessorHandler(web.RequestHandler):
         logger.debug("path_arr={} -> pa={}".format(path_arr, pa))
 
         cls.load_module()
-        url_html = SETTINGS['url_html']
+        url_html = Config.SETTINGS['url_html']
 
         module, controller, action = pa[0], '.'.join(pa[1:-1]), pa[-1]
         module, controller, action = module.lower(), controller.lower(), action

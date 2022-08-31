@@ -3,9 +3,6 @@
 """
 import logging, datetime
 from logging.handlers import TimedRotatingFileHandler
-
-from quickpython.component.env import env
-
 quick_name = str(__name__).split('.')[0]
 
 
@@ -21,7 +18,7 @@ class LoggingManger:
     server = logging.getLogger(SERVER)
 
     @classmethod
-    def init(cls, log_dir, mode='WEB', debug=False):
+    def init(cls, env, log_dir, mode='WEB', debug=False):
         """初始化日志模块"""
         logging.getLogger("asyncio").setLevel(logging.WARNING)
         logging.getLogger("matplotlib").setLevel(logging.WARNING)

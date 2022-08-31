@@ -160,18 +160,18 @@ class QPFileCache(CacherBase):
 
 class QPRedisCache(CacherBase):
 
-    HOST = env.get('redis.host', "127.0.0.1")
-    PORT = env.get('redis.port', 6379)
-    PASSWORD = env.get('redis.password', '')
-    DATABASE = env.get('redis.database', 8)
-    PREFIX = ""
-
-    def __init__(self):
+    def __init__(self, config: dict):
         try:
             from redis import Redis, ConnectionPool
         except:
             raise Exception("缺少redis包，请执行安装命令：pip3 install redis")
-        pool = ConnectionPool(host=self.HOST, port=self.PORT, password=self.PASSWORD, db=self.DATABASE, decode_responses=True)
+        self.prefix = config.get("prefix", 1)
+        pool = ConnectionPool(
+            host=config.get("host", "127.0.0.1"),
+            port=config.get("port", 6379),
+            password=config.get("password", None),
+            db=config.get("db", 1),
+            decode_responses=True)
         conn = Redis(connection_pool=pool)
         self.__conn = conn
 
@@ -183,7 +183,7 @@ class QPRedisCache(CacherBase):
         :param def_val: object 默认返回数据，可以是int、function
         :param timeout: int 超时时间，当def_val不为空时，必须设置该值
         """
-        key = self.PREFIX + key
+        key = self.prefix + key
         try:
             content = self.__conn.get(key)
             if content is None:
@@ -303,19 +303,20 @@ class QPCache(CacherBase):
 
     __ENGINE_MAP__ = {}
 
-    def __init__(self, name='default', type_=None):
-        from quickpython.server.settings import CACHE
-        CacherBase.TIMEOUT = CACHE.get('timeout', CacherBase.TIMEOUT)
-        if type_ is None:
-            type_ = CACHE.get('type', 'memory')
-        if name not in self.__ENGINE_MAP__:
-            self.__ENGINE_MAP__[name] = self.__load_engine(type_)
-        self._target = self.__ENGINE_MAP__[name]
+    def __init__(self, name='default', type_=None, config=None):
+        if config is None:
+            from quickpython.server import Config
+            CacherBase.TIMEOUT = Config.CACHE.get('timeout', CacherBase.TIMEOUT)
+            if type_ is None:
+                type_ = Config.CACHE.get('type', 'memory')
+            if name not in self.__ENGINE_MAP__:
+                self.__ENGINE_MAP__[name] = self.__load_engine(type_, Config.CACHE)
+            self._target = self.__ENGINE_MAP__[name]
 
     @staticmethod
-    def __load_engine(type_: str):
+    def __load_engine(type_: str, config=None):
         if type_.upper() == 'FILE': engine = QPFileCache()
-        elif type_.upper() == 'REDIS': engine = QPRedisCache()
+        elif type_.upper() == 'REDIS': engine = QPRedisCache(config)
         elif type_.upper() == 'MEMORY': engine = QPMemoryCache()
         else: raise Exception('不支持的缓存引擎：{}'.format(type_))
         return engine

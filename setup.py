@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="quickpython-mvc",
+    name="quickmvc",
     version="0.1.3",
     keywords=["quickpython-mvc", "quickpython", "quick", "WEB", "database", "MVC"],  # 关键字
     description="Python rapid development framework .",

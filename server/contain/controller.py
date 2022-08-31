@@ -2,9 +2,9 @@ import logging
 from quickpython.server.exception import *
 from quickpython.component.session import Session
 from quickpython.component.result import Result
-from quickpython.server.settings import SETTINGS
 from .request import Request
 from .handler import HandlerHelper
+from quickpython.server import Config
 
 
 class Controller:
@@ -27,7 +27,7 @@ class Controller:
     @property
     def _version(self):
         # return Utils.stime() if SETTINGS['debug'] else SETTINGS['version']
-        return SETTINGS['version']
+        return Config.SETTINGS['version']
 
     def initialize(self):
         pass

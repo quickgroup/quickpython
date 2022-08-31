@@ -69,3 +69,5 @@ chromedriver
 
 # python3 manage.py inspectdb > app/models.py
 .pypirc
+
+.md/

@@ -3,11 +3,13 @@ import mimetypes, importlib
 
 from tornado import web
 
-from quickpython.config import Config, env
+try:
+    from config import Config, env       # 应用自己的config
+except:
+    from quickpython.config import Config, env
 
 from .request import Request
 from ..exception import *
-from ..settings import SETTINGS
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +85,8 @@ class HandlerHelper:
         如果是文件且存在就处理
         PS: http://127.0.0.1:8107/static/assets/img/logo.png
         """
-        public_path = SETTINGS.get('public_path', "")
-        res_max_age = SETTINGS.get('resource_max_age', 86400)
+        public_path = Config.SETTINGS.get('public_path', "")
+        res_max_age = Config.SETTINGS.get('resource_max_age', 86400)
 
         # 文件输出
         if cls._write_file(hdl, path, 0, mime):

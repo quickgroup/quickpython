@@ -152,6 +152,7 @@ class Text(ColumnBase):
 
 class Datetime(ColumnBase):
     type_ = 'datetime'
+    format_ = "%Y-%m-%d %H:%M:%S"
 
 
 class Date(ColumnBase):
