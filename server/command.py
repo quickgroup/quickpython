@@ -1,14 +1,29 @@
 """
 命令行模式
 """
-import importlib, sys, logging
+import importlib, sys, logging, os, time
 from quickpython.config import Config
+logger = logging.getLogger(__name__)
 
 
 class CommandManager:
 
     @staticmethod
     def call(argv):
+        try:
+            CommandManager._call(argv)
+        except KeyboardInterrupt as e:
+            logger.info("程序退出 From KeyboardInterrupt")
+        except SystemExit as e:
+            logger.info("程序退出 From SystemExit")
+            os._exit(0)
+        except BaseException as e:
+            logger.error("程序异常")
+            logger.exception(e)
+            time.sleep(5)
+
+    @staticmethod
+    def _call(argv):
         app_path = Config.APP_PATH.replace(Config.ROOT_PATH + "/", '')
         cmd_path = str(app_path + "/command").replace("\\", ".").replace(r"/", ".")
         app_cmd = importlib.import_module(cmd_path)
