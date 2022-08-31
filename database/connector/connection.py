@@ -1,7 +1,7 @@
 """
     数据库连接管理器
 """
-import time, threading
+import os, threading
 from .. import settings
 from ..contain.func import *
 from ..log import get_logger
@@ -34,7 +34,7 @@ class Connection:
 
     @staticmethod
     def __cache_name__(name):
-        return '__db_{}_connection'.format(name)
+        return '__{}_{}_db_{}_connection'.format(os.getpid(), get_thr_id(), name)
 
     @staticmethod
     def __find_engine(config) -> Connector.__class__:
