@@ -1,8 +1,7 @@
 """
     数据库连接管理器
 """
-import pymysql
-import time, threading, logging
+import time, threading
 from .. import settings
 from ..contain.func import *
 from ..log import get_logger
