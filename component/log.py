@@ -28,10 +28,7 @@ class LoggingManger:
         console_handler = logging.StreamHandler()
         # 文件
         encoding = env.get("encoding", "UTF-8")
-        if mode == 'WEB':
-            file_name = "{}.log".format(mode)
-        else:
-            file_name = "{}_{}.log".format(mode, datetime.datetime.now().strftime("%Y-%m-%d"))
+        file_name = "{}_{}.log".format(mode, datetime.datetime.now().strftime("%Y-%m-%d"))
         file_path = '{}/{}'.format(log_dir, file_name)
         file_handler = TimedRotatingFileHandler(file_path, when='D', backupCount=33, encoding=encoding)
         # 全局
