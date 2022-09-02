@@ -165,7 +165,7 @@ class QPRedisCache(CacherBase):
             from redis import Redis, ConnectionPool
         except:
             raise Exception("缺少redis包，请执行安装命令：pip3 install redis")
-        self.prefix = config.get("prefix", 1)
+        self.prefix = config.get("prefix", "__QP_CACHE_")
         pool = ConnectionPool(
             host=config.get("host", "127.0.0.1"),
             port=config.get("port", 6379),
