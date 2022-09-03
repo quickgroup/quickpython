@@ -37,6 +37,8 @@ class Core:
             cls.log.debug("App stop")
             cls._app_stop()
             cls.log.info("App stop complete.")
+            import os
+            os._exit(0)
 
         signal.signal(signal.SIGINT, my_handler)  # 设置相应信号处理的handler
         # signal.signal(signal.SIGHUP, my_handler)
