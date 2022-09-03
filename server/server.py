@@ -69,7 +69,7 @@ class Core:
         """cmd环境"""
         cls.init(Config.MODE_CMD)
         cls._cmd_signal_init()
-        cls.log.info("App cmd start")
+        cls.log.info("App cmd start, argv={}".format(argv))
         # 加载命令行程序
         CommandManager.call(argv)
         # 应用结束
