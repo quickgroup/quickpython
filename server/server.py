@@ -34,9 +34,7 @@ class Core:
         """cmd模型信号处理"""
 
         def my_handler(signum, frame):  # 信号处理函数
-            cls.log.debug("App stop")
             cls._app_stop()
-            cls.log.info("App stop complete.")
             import os
             os._exit(0)
 
@@ -46,8 +44,10 @@ class Core:
 
     @classmethod
     def _app_stop(cls):
+        cls.log.debug("App stop")
         hooker.send(hooker.EXIT)
         hooker.stop()
+        cls.log.info("App stop complete.")
 
     @classmethod
     def start(cls, argv):
@@ -72,10 +72,8 @@ class Core:
         cls.init(Config.MODE_CMD)
         cls._cmd_signal_init()
         cls.log.info("App cmd start, argv={}".format(argv))
-        # 加载命令行程序
-        CommandManager.call(argv)
-        # 应用结束
-        cls._app_stop()
+        CommandManager.call(argv)       # 命令行处理
+        cls._app_stop()     # 应用结束
 
     @classmethod
     def web(cls):
