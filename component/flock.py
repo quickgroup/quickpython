@@ -10,9 +10,12 @@ LOCK_UN = 4
 IS_WIN32 = sys.platform == "win32"
 if IS_WIN32:
     # pip install pypiwin32
-    import win32con, win32file, pywintypes
-    LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
-    LOCK_NB = win32con.LOCKFILE_FAIL_IMMEDIATELY
+    try:
+        import win32con, win32file, pywintypes
+        LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
+        LOCK_NB = win32con.LOCKFILE_FAIL_IMMEDIATELY
+    except:
+        pass
 
 else:
     from fcntl import LOCK_EX, LOCK_SH, LOCK_NB
