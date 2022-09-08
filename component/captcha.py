@@ -2,12 +2,15 @@
     pip install Pillow==8.4.0
 """
 import logging, random, os
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+try:
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+except:
+    logging.error("请先安装 Pillow==8.4.0 依赖再使用Captcha")
 
 CACHE_NAME = "__CAPTCHA_CACHE__"
 
 
-class Captcha(object):
+class Captcha:
 
     @staticmethod
     def out_django(request):
