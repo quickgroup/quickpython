@@ -1,3 +1,6 @@
+"""
+    pip install Pillow==8.4.0
+"""
 import logging, random, os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 

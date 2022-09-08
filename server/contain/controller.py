@@ -3,7 +3,6 @@ from quickpython.server.exception import *
 from quickpython.component.session import Session
 from quickpython.component.result import Result
 from quickpython.server.settings import SETTINGS
-from .request import Request
 from .handler import HandlerHelper
 
 
