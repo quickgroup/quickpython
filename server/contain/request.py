@@ -1,5 +1,5 @@
 
-from tornado import httputil
+from ..common import *
 
 
 class Request:      # type: httputil.HTTPServerRequest

@@ -1,15 +1,14 @@
 import json, logging, os
 import mimetypes, importlib
 
-from tornado import web
-
 try:
     from config import Config, env       # 应用自己的config
 except:
     from quickpython.config import Config, env
-
-from .request import Request
+    
+from ..common import *
 from ..exception import *
+from .request import Request
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ exception_html = env.get("ROOT_PATH") + "/quickpython/view/exception.html"
 class HandlerHelper:
 
     @staticmethod
-    def before(hdl: web.RequestHandler):
+    def before(hdl: "web.RequestHandler"):
         request = hdl.request = Request(hdl.request)
         request.method = 'POST' if hasattr(hdl, 'method') is None else request.method
         # 用户IP
@@ -33,7 +32,7 @@ class HandlerHelper:
         hdl.request.is_ajax = True if request.headers.get('x-requested-with') == 'XMLHttpRequest' else False
 
     @staticmethod
-    def parse_params(hdl: web.RequestHandler):
+    def parse_params(hdl: "web.RequestHandler"):
         """
         解析请求数据
         支持：get、post、json
@@ -67,7 +66,7 @@ class HandlerHelper:
         return
 
     @classmethod
-    def return_response(cls, hdl: web.RequestHandler, e: ResponseException):
+    def return_response(cls, hdl: "web.RequestHandler", e: ResponseException):
         cls.return_response_code(hdl, e)
         if 200 <= e.code < 300 or (e.code == 1 or e.code == 2):
             hdl.render(dispatch_jump_html, **e.__dict__())
@@ -76,11 +75,11 @@ class HandlerHelper:
         return True
 
     @classmethod
-    def return_response_code(cls, hdl: web.RequestHandler, e: ResponseException):
+    def return_response_code(cls, hdl: "web.RequestHandler", e: ResponseException):
         hdl.set_status(e.code)
 
     @classmethod
-    def return_file(cls, hdl: web.RequestHandler, path, mime=None):
+    def return_file(cls, hdl: "web.RequestHandler", path, mime=None):
         """
         如果是文件且存在就处理
         PS: http://127.0.0.1:8107/static/assets/img/logo.png
@@ -97,7 +96,7 @@ class HandlerHelper:
         return False
 
     @classmethod
-    def _write_file(cls, hdl: web.RequestHandler, file_path, max_age=86400, mime=None):
+    def _write_file(cls, hdl: "web.RequestHandler", file_path, max_age=86400, mime=None):
         # 直接输出二进制内容
         if isinstance(file_path, bytes):
             hdl.set_header('content-type', "application/octet-stream" if mime is None else mime)

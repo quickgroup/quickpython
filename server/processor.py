@@ -3,9 +3,7 @@ import importlib, time, os, inspect
 from typing import Optional, Awaitable, Any
 from concurrent.futures import ThreadPoolExecutor
 
-import tornado
-from tornado import web, httputil
-from tornado.concurrent import run_on_executor
+from .common import *
 
 import quickpython
 from quickpython.server import Config

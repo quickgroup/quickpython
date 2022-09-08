@@ -31,7 +31,7 @@ class Config:
     IS_WIN32 = sys.platform == "win32"
 
     # 运行模式
-    MODE = None     # 运行模式：web、cmd
+    MODE = None
     MODE_WEB = "WEB"
     MODE_CMD = "CMD"
 
