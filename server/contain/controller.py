@@ -2,7 +2,7 @@ import logging
 from quickpython.server.exception import *
 from quickpython.component.session import Session
 from quickpython.component.result import Result
-from quickpython.server.settings import SETTINGS
+from config import Config
 from .request import Request
 from .handler import HandlerHelper
 from quickpython.server import Config
