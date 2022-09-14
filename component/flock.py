@@ -32,6 +32,9 @@ class FLock:
         self.file_name = file_name
         self.fd = open(file_name, 'w')
         if IS_WIN32:
+            """
+            pip3 install pypiwin32
+            """
             self.__overlapped__ = pywintypes.OVERLAPPED()
 
     def lock(self, flags=LOCK_EX):
