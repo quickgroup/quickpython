@@ -130,17 +130,7 @@ class Model:
         self.__query__.where(where['key'], where['type'], where['val'])
         return self
 
-    def get(self, *args, **kwargs):
-        if len(args) == 1 and len(kwargs) == 0 and args[0] is not None:
-            self.where(**{self.__table_pk__.name: args[0]})
-        elif len(kwargs) > 0:
-            self.where(*args, **kwargs)
-        return self.find()
-
-    def first(self):
-        return self.find()
-
-    def find(self):
+    def _query_before(self):
         # 预加载处理（预载入模式开启后，数据返回将进行关联数据填充
         if not_empty(self.__withs__):
             # 加载本表字段
@@ -154,6 +144,9 @@ class Model:
         if self.__soft_delete__ is not None:
             self.__query__.where(None, 'exp', "{} IS NULL".format(self.__soft_delete__.name))
 
+    def find(self):
+        # 模型查询准备
+        self._query_before()
         # 执行查询
         row = self.__query__.find()
         if row is None:
@@ -184,20 +177,23 @@ class Model:
 
         return obj
 
+    def get(self, *args, **kwargs):
+        if len(args) == 1 and len(kwargs) == 0 and args[0] is not None:
+            self.where(**{self.__table_pk__.name: args[0]})
+        elif len(kwargs) > 0:
+            self.where(*args, **kwargs)
+        return self.find()
+
+    def first(self):
+        return self.find()
+
     def all(self):
         logger.warning("此方法为兼容而存在，请使用select方法")
         return self.select()
 
     def select(self, to_dict=False):
-        # 预加载处理（预载入模式开启后，数据返回将进行关联数据填充
-        if not_empty(self.__withs__):
-            # 加载本表字段
-            self.__query__.field(True, False, self.__table__)
-            # 处理关联表
-            for it in self.__withs__:
-                it.load_model_cls(self)
-                it.eagerly(self.__query__)
-
+        # 模型查询准备
+        self._query_before()
         # 执行查询
         rows = self.__query__.select()
         if empty(rows):
@@ -503,3 +499,40 @@ class Model:
         return Pagination(rows, page, page_size, count, params)
 
 
+class ModelSet:
+    """
+    模型结果集输出
+    - 实现迭代、list等方法
+    - 主要封装查询出来得多条数据
+    - 与模型触发同批次结果集后载入数据：in关联，并重新组装数据到结果集
+    """
+
+    def __init__(self):
+        self._list = []
+
+    def __iter__(self):
+        return ModelSetSetIterator(self._list)
+
+    def append(self, item):
+        self._list.append(item)
+
+    def remove(self, item):
+        self._list.remove(item)
+
+
+class ModelSetSetIterator(object):
+
+    def __init__(self, items):
+        self.items = items
+        self.index = 0
+
+    def __iter__(self):
+        pass
+
+    def __next__(self):
+        if self.index < len(self.items):
+            data = self.items[self.index]
+            self.index += 1
+            return data
+        else:
+            raise StopIteration
