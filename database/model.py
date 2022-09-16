@@ -75,8 +75,9 @@ class Model:
                     cls.__table_pk__ = obj
                 cls.__table_fields__[name] = obj
                 cls.__attrs__[name] = obj
+
                 # 软删除字段：只能存在一个
-                if obj.soft:
+                if obj.soft_delete is True:
                     cls.__soft_delete__ = obj
 
             if issubclass(obj.__class__, RelationModel):
@@ -148,6 +149,10 @@ class Model:
             for it in self.__withs__:
                 it.load_model_cls(self)
                 it.eagerly(self.__query__)
+
+        # 软删除字段
+        if self.__soft_delete__ is not None:
+            self.__query__.where(None, 'exp', "{} IS NULL".format(self.__soft_delete__.name))
 
         # 执行查询
         row = self.__query__.find()
@@ -267,6 +272,7 @@ class Model:
                 return self.__query__.update({self.__soft_delete__.name: ColumnFunc.now()})  # 软删除
             else:
                 raise Exception("不支持的软删除字段类型")
+        # 真实删除
         return self.__query__.delete()
 
     def __get_pk_val__(self):
@@ -291,8 +297,7 @@ class Model:
             self.__query__.update(data)
 
     def delete(self):
-        if len(self.__query__.__get_map__()) > 0:
-           self.__query__.delete()     # 实际删除
+        self.destroy()
 
     """批量新增"""
     @classmethod

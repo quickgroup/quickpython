@@ -15,7 +15,7 @@ class DemoModel:
         """"""
         # self.save()
         # self.save_2()
-        # self.remove()
+        self.remove()
         # self.save_update()
         # self.get()
         # self.aggregation()
@@ -24,9 +24,10 @@ class DemoModel:
         # self.join_1()
         # self.join_2()
         # tran
-        self.tran2()
+        # self.tran2()
         # self.thread()
         # connection
+        # self.connection()
         # self.connection()
 
     def save(self):

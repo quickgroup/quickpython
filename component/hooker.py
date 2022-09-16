@@ -228,7 +228,7 @@ class ThreadPoolHooker(HookerBase):
 
     def join(self):
         """等待执行完成"""
-        self.logger.debug('{} Join, qsize={}'.format(self.count, self._queue.qsize()))
+        self.logger.info('{} Join, qsize={}'.format(self.count, self._queue.qsize()))
         self._queue.join()          # 等待队列全部完成
         self.count_add()
 

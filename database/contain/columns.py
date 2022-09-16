@@ -49,7 +49,7 @@ class ColumnBase:
 
         self.comment = kwargs.pop("comment", None)  # 字段备注
         self.proxies = kwargs.pop("proxies", None)  # 字段前缀
-        self.soft = kwargs.pop("soft", False)  # 软删除字段
+        self.soft_delete = kwargs.pop("soft_delete", False)  # 软删除字段
 
         self.value = kwargs.pop("value", self.default)
 

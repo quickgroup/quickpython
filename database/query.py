@@ -143,7 +143,7 @@ class QuerySet(object):
         # 自写语句
         elif isinstance(field, str) and len(re.findall('[,=\>\<\'\"\(\s]', field)) > 0:
             field = Expression(field)
-            self.__map[logic][str(field)] = ['exp', field]
+            self.__map[logic][str(field)] = ['EXP', field]
         # 条件组装
         elif op is None and condition is None:
             if isinstance(field, dict):
@@ -162,8 +162,8 @@ class QuerySet(object):
             where[field] = ['=', op]
             self.__map[logic][field] = where[field]
         else:
-            if op == 'exp':
-                where[field] = ['exp', Expression(condition)]
+            if str(op).upper() == 'EXP':
+                where[field] = ['EXP', Expression(condition)]
             else:
                 where[field] = [op, condition]
             self.__map[logic][field] = where[field]
