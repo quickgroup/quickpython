@@ -1,2 +1,7 @@
 tornado==6.1
 pymysql==1.0.2
+
+# Optional dependence
+#apscheduler==3.9.1
+#redis==4.3.4
+#pillow==8.3.1

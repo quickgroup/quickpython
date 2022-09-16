@@ -23,10 +23,12 @@ class LoggingManger:
         logging.getLogger("asyncio").setLevel(logging.WARNING)
         logging.getLogger("matplotlib").setLevel(logging.WARNING)
         logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-        mode = mode.upper()
+        logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
+        logging.getLogger('apscheduler.scheduler').setLevel(logging.WARNING)
         # 控制台
         console_handler = logging.StreamHandler()
         # 文件
+        mode = mode.upper()
         encoding = env.get("encoding", "UTF-8")
         file_name = "{}_{}.log".format(mode, datetime.datetime.now().strftime("%Y-%m-%d"))
         file_path = '{}/{}'.format(log_dir, file_name)

@@ -9,6 +9,9 @@ from quickpython.server import Config
 class Core:
     log = logging.getLogger(__name__)
 
+    def __init__(self):
+        self.scheduler = None
+
     @classmethod
     def _web_signal_init(cls):
         """web环境监听退出，不能再bind之前调用"""
