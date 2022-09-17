@@ -10,10 +10,6 @@ class Boot:
     __version__ = '1.0.3'
 
     @classmethod
-    def start(cls, argv):
-        Core.start(argv)
-
-    @classmethod
     def cmd(cls, argv):
         Core.cmd(argv)
 

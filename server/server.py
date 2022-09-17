@@ -1,16 +1,12 @@
-import sys, signal, logging, datetime
+import os, sys, signal, logging, datetime
 import tornado.ioloop
 import tornado.web
-from quickpython.component import hooker
-from .command import CommandManager, EventManager
+from .command import CommandManager, ComponentManager
 from quickpython.server import Config
 
 
 class Core:
     log = logging.getLogger(__name__)
-
-    def __init__(self):
-        self.scheduler = None
 
     @classmethod
     def _web_signal_init(cls):
@@ -38,7 +34,6 @@ class Core:
 
         def my_handler(signum, frame):  # 信号处理函数
             cls._app_stop()
-            import os
             os._exit(0)
 
         signal.signal(signal.SIGINT, my_handler)  # 设置相应信号处理的handler
@@ -48,40 +43,30 @@ class Core:
     @classmethod
     def _app_stop(cls):
         cls.log.debug("App stop")
-        hooker.send(hooker.EXIT)
-        hooker.stop()
+        ComponentManager.app_stop()
         cls.log.info("App stop complete.")
 
     @classmethod
-    def start(cls, argv):
-        mode = argv[0] if len(argv) > 0 else None
-        if mode == "cmd":
-            cls.cmd(argv)
-        elif mode == "web":
-            cls.web()
-        else:
-            raise Exception("缺少启动模式参数")
-
-    @classmethod
-    def init(cls, mode):
+    def _app_init(cls, mode):
+        # 初始化
         Config.init(mode)
-        hooker.start()
-        EventManager.init()
+        ComponentManager.init()
         logging.getLogger("tornado.access").setLevel(logging.ERROR)
 
     @classmethod
     def cmd(cls, argv):
-        """cmd环境"""
-        cls.init(Config.MODE_CMD)
+        """cmd"""
+        cls._app_init(Config.MODE_CMD)
         cls._cmd_signal_init()
         cls.log.info("App cmd start, argv={}".format(argv))
+        # ComponentManager.start()      # cmd环境不启动定时器
         CommandManager.call(argv)       # 命令行处理
         cls._app_stop()     # 应用结束
 
     @classmethod
     def web(cls):
-        """启动web环境"""
-        cls.init(Config.MODE_WEB)
+        """web"""
+        cls._app_init(Config.MODE_WEB)
         # 配置
         settings = {
             # 'debug': SETTINGS['debug'],
@@ -117,6 +102,7 @@ class Core:
             server.listen(SETTINGS['port'])
 
         cls._web_signal_init()
+        ComponentManager.start()
         cls.log.info("WEB start complete, port={}".format(SETTINGS['port']))
         tornado.ioloop.IOLoop.instance().start()
         # 关闭

@@ -667,7 +667,8 @@ import inspect
 
 class ClassUtils:
 
-    STATIC_METHODS = {}
+    STATIC_METHODS = {}     # 静态方法
+    INS_CLASS = {}          # 单例类
 
     @staticmethod
     def load_static_method(path):
@@ -695,11 +696,16 @@ class ClassUtils:
     @staticmethod
     def load_method(path, **kwargs):
         """字符串加载类方法（每次都创建对象"""
-        clazz_info = str(path).split("#")
-        model_path, clazz_name = clazz_info[0].rsplit(".", 1)
-        module = importlib.import_module(model_path)
-        obj = getattr(module, clazz_name)(**kwargs)
-        method = getattr(obj, clazz_info[1])
+        is_ins = kwargs.pop('is_ins', True)
+        info = str(path).split("#")
+        if is_ins and info[0] in ClassUtils.INS_CLASS:
+            obj = ClassUtils.INS_CLASS.get(info[0])
+        else:
+            model_path, clazz_name = info[0].rsplit(".", 1)
+            module = importlib.import_module(model_path)
+            obj = getattr(module, clazz_name)(**kwargs)
+
+        method = getattr(obj, info[1])
         return method
 
     @staticmethod
@@ -740,10 +746,11 @@ class BaseClass:
     @classmethod
     def instance(cls, *args, **kwargs):
         clazz = cls
-        if not hasattr(clazz, "_instance_" + cls.__name__):
+        if hasattr(clazz, '__instance_lock__') is False:
             clazz.__instance_lock__ = threading.Lock()
-            with clazz.__instance_lock__:  # 为了保证线程安全在内部加锁
-                if not hasattr(clazz, "_instance_" + cls.__name__):
+        if hasattr(clazz, '_instance') is False:
+            with clazz.__instance_lock__:
+                if hasattr(clazz, '_instance') is False:
                     clazz._instance = clazz(*args, **kwargs)
         return clazz._instance
 

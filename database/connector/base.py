@@ -6,6 +6,8 @@ from ..contain.func import *
 
 from ..log import get_logger
 log = get_logger()
+log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 class ConnectProxy:
@@ -29,6 +31,7 @@ class Connector:
         'prefix': "",       # 表前缀
         'options': {},
     }
+    ECHO = None
 
     def __init__(self, name='default', config=None):
         self.name = name
@@ -39,7 +42,8 @@ class Connector:
         self._thr_id = get_thr_id()
         self._autocommit_of = True   # 自动提交（False表示在事务中
         self._expire_time = int(time.time()) + self.get_config('wait_timeout')  # 超时时间
-        log.setLevel(logging.DEBUG if self.config.get('echo', True) else logging.INFO)
+        if Connector.ECHO is None:
+            Connector.ECHO = self.config.get('echo', True)
 
     def load_config(self, config2=None):
         config = self.__COMMON_CONFIG
@@ -53,6 +57,13 @@ class Connector:
         if 'options' in self.config and key in self.config['options']:
             return self.config['options'][key]
         return def_val
+
+    @staticmethod
+    def log_echo(echo=True):
+        Connector.ECHO = echo
+
+    def on_echo(self, x):
+        Connector.ECHO = x
 
     def connect(self):
         self.connect_before()
@@ -100,10 +111,6 @@ class Connector:
     def ping(self):
         """数据库PING"""
 
-    def on_echo(self, x):
-        self.config['echo'] = x
-        self.log.setLevel(logging.DEBUG if x else logging.INFO)
-
     def autocommit(self, x):
         self._autocommit_of = x
         self._autocommit(x)
@@ -136,8 +143,8 @@ class Connector:
     def _cur_execute(self, cur, sql: str):
         try:
             sql = sql.strip()
-            # log.debug(self.get_config('engine') + ": " + (sql if len(sql) <= 1024 else sql[0:1024]))
-            log.debug((sql if len(sql) <= 1024 else sql[0:1024]))
+            if Connector.ECHO:
+                log.debug(sql if len(sql) <= 1024 else sql[0:1024])
             return cur.execute(sql)
 
         except SystemExit as e:

@@ -3,6 +3,8 @@
 """
 import importlib, sys, logging, os, time
 from quickpython.config import Config
+from quickpython.component import hooker
+from quickpython.component.scheduler import Scheduler
 logger = logging.getLogger(__name__)
 
 
@@ -37,10 +39,28 @@ class CommandManager:
             logging.warning("app/command.py脚本中未包含COMMANDS配置")
 
 
-class EventManager:
+class ComponentManager:
 
     @staticmethod
     def init():
+        app_dir = "app"
         app_path = Config.APP_PATH.replace(Config.ROOT_PATH + "/", '')
         cmd_path = str(app_path + "/event").replace("\\", ".").replace(r"/", ".")
         app_cmd = importlib.import_module(cmd_path)
+        # hooker
+        hooker.start()
+        # 定时器
+        scheduler = Scheduler.instance()
+        app_crontab = importlib.import_module("{}.crontab".format(app_dir))
+        if hasattr(app_crontab, 'TASKS'):
+            scheduler.add(app_crontab.TASKS)
+
+    @staticmethod
+    def start():
+        Scheduler.instance().start()
+
+    @staticmethod
+    def app_stop():
+        hooker.send(hooker.EXIT)
+        hooker.stop()
+        Scheduler.instance().stop()
