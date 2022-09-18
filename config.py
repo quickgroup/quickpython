@@ -155,7 +155,7 @@ class Config:
     def web_thr_count(cls, num=None):
         # thr_num = cpu_count() * 2 if num is None else num
         # thr_num = 4 if cls.is_debug() else thr_num
-        return 4
+        return 8
 
     @classmethod
     def local_set(cls, name, val):
