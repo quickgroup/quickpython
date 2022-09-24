@@ -39,7 +39,7 @@ class Controller:
         self.controller = controller.replace('.', '/')
         self.action = action
 
-    def __initialize_request__(self, path, params, request):
+    def __initialize_request__(self, path, params, request: Request):
         self.path = path
         self.params = params
         self.request = request

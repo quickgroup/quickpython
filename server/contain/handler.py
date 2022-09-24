@@ -19,45 +19,6 @@ exception_html = env.get("ROOT_PATH") + "/quickpython/view/exception.html"
 class HandlerHelper:
 
     @staticmethod
-    def before(hdl: "web.RequestHandler"):
-        request = hdl.request = Request(hdl.request)
-        request.method = 'POST' if hasattr(hdl, 'method') is None else request.method
-        # 用户IP
-        hdl.client_ip = request.remote_ip
-        # 路径处理
-        path = hdl.path = hdl.request.path.replace("//", "/")
-        path_arr = [] if path == '/' else path.split('/')
-        hdl.path_arr = list(filter(lambda x: len(x) > 0, path_arr))
-        # 是否ajax
-        hdl.request.is_ajax = True if request.headers.get('x-requested-with') == 'XMLHttpRequest' else False
-
-    @staticmethod
-    def parse_params(hdl: "web.RequestHandler"):
-        """
-        解析请求数据
-        支持：get、post、json
-        """
-        request = hdl.request
-        params = {}
-        for key in request.query_arguments:
-            params[key] = hdl.get_query_argument(key)
-        for key in request.arguments:
-            params[key] = hdl.get_argument(key)
-
-        # json
-        if request.headers.get('content-type', '').find('application/json') > -1:
-            try:
-                body = request.body.decode('utf-8')
-                content_params = json.loads(body)
-                params = {**params, **content_params}
-            except BaseException as e:
-                logger.error("json请求数据解析异常")
-                logger.error(e)
-
-        hdl.params = request.params = params
-        return params
-
-    @staticmethod
     def render_exception(e):
         return
 
@@ -79,7 +40,7 @@ class HandlerHelper:
         hdl.set_status(e.code)
 
     @classmethod
-    def return_file(cls, hdl: "web.RequestHandler", path, mime=None):
+    def return_file(cls, hdl, path, mime=None):
         """
         如果是文件且存在就处理
         PS: http://127.0.0.1:8107/static/assets/img/logo.png
@@ -96,7 +57,7 @@ class HandlerHelper:
         return False
 
     @classmethod
-    def _write_file(cls, hdl: "web.RequestHandler", file_path, max_age=86400, mime=None):
+    def _write_file(cls, hdl, file_path, max_age=86400, mime=None):
         # 直接输出二进制内容
         if isinstance(file_path, bytes):
             hdl.set_header('content-type', "application/octet-stream" if mime is None else mime)

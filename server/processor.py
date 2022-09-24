@@ -10,7 +10,7 @@ from quickpython.server import Config
 from quickpython.component.function import *
 from quickpython.component.result import Result
 from .exception import *
-from .contain import Controller, Request, HandlerHelper
+from .contain import Controller, Request, Response, HandlerHelper
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -18,68 +18,66 @@ encoding = Config.SETTINGS['encoding']
 DS = r"/"
 
 
-class ProcessorHandler(web.RequestHandler):
+class Application:
+    pass
 
-    executor = ThreadPoolExecutor(max_workers=Config.web_thr_count(Config.SETTINGS['pro_thr_num']))
 
-    def __init__(self, application: "Application", request: httputil.HTTPServerRequest, **kwargs: Any):
-        super().__init__(application, Request(request), **kwargs)
+class QuickPythonHandler:
+
+    def __init__(self, application: Application, request: Request, hdl=None):
+        self.application = application
+        self.request = request
+        self.response = Response()
+        self._hdl = hdl         # tornado的hdl
         self.params = {}        # 收集到的请求参数
-        self.path = '/'         # 请求路径
-        self.path_arr = []      # 请求路径分割数组
+        self._is_finish = False
 
-    def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
-        pass
+    @classmethod
+    def action(cls, path, header=None, data=None):
+        """本地接口直接调用"""
 
-    @tornado.gen.coroutine
-    def get(self, *args, **kwargs):
-        self.request.method = 'GET'
-        resp_content = yield self._dispose(*args)
-        if resp_content is True:
-            self.finish()
-            return
-        if self.response_write(resp_content) is False:  # =False是未处理
-            self.finish()
-            return
-
-    @tornado.gen.coroutine
-    def post(self, *args, **kwargs):
-        self.request.method = 'POST'
-        resp_content = yield self._dispose(*args)
-        if resp_content is True:
-            self.finish()
-            return
-        if self.response_write(resp_content) is False:  # =False是未处理
-            self.finish()
-            return
-
-    @run_on_executor
-    def _dispose(self, *args):
+    def __dispose__(self):
         try:
-            # 初始数据
+            ret = self.__dispose()
+        except BaseException as e:
+            ret = e
+
+        if ret is not None:
+            self.response_write(ret)
+
+        self.finish()
+
+    def __dispose(self):
+        ret = None
+        try:
+            # 初始
+            request = self.request
             self._on_mtime = int(time.time() * 1000)
             self._is_finish = False         # 请求是否结束
             self._is_res_request = False    # 是否是资源请求
             # 请求处理
-            HandlerHelper.before(self)
-            logger.debug("method={}, args={}".format(self.request.method, args))
+            logger.debug("method={}, path={}".format(request.method, request.path))
+
             # 是否是资源文件下载（需要对upload进行鉴权处理
-            if HandlerHelper.return_file(self, self.path):
+            if HandlerHelper.return_file(self, request.path):
                 self._is_res_request = True
                 return True
+
             # 收集请求参数
-            params = self.params = HandlerHelper.parse_params(self)
-            logger.debug("path={}, params={}".format(self.path, params))
+            params = self.params = self.request.params
+            logger.debug("path={}, params={}".format(request.path, params))
+
             # 寻找控制器
-            controller, controller_action = self.find_controller_action(self, self.path, self.path_arr)
-            controller.__initialize_request__(self.path, params, self.request)
+            controller, controller_action = self.find_controller_action(self, self.request)
+            controller.__initialize_request__(request.path, params, self.request)
 
             # 执行控制器方法
             # hooker.trigger('request_before', controller)
             ret = controller_action()
             # hooker.trigger('request_after', controller)
 
-            return "None" if ret is None else ret
+            ret = "None" if ret is None else ret
+            return ret
 
         except ResponseException as e:
             return e
@@ -174,8 +172,9 @@ class ProcessorHandler(web.RequestHandler):
         return ret
 
     @classmethod
-    def find_controller_action(cls, pro_obj, path, path_arr):
+    def find_controller_action(cls, pro_obj, request):
         """找到对应控制器和方法"""
+        path, path_arr = request.path, request.path_arr
         pa = path_arr[1:] if len(path_arr) > 0 and path_arr[0] == '' else path_arr
         if len(pa) == 0 or pa[0] == '':
             pa.extend(["index", "index", "index"])
@@ -224,6 +223,7 @@ class ProcessorHandler(web.RequestHandler):
                 logger.exception(e)
                 ret = ResponseException("页面异常：{}".format(str(e)), code=500)
                 return HandlerHelper.return_response(self, ret)
+
         elif isinstance(ret, ResponseFileException):
             return HandlerHelper.return_file(self, ret.file, ret.mime)
         elif isinstance(ret, ResponseException):
@@ -249,5 +249,61 @@ class ProcessorHandler(web.RequestHandler):
 
         return False
 
+    def get_status(self):
+        return self.request.status
+
+    def set_status(self, status):
+        self.response.status = status
+
+    def set_header(self, key, val):
+        self.response.set_header(key, val)
+
+    def write(self, content=None):
+        self.response.write(content)
+
+    def render(self, template_name, **kwargs):
+        """渲染模板"""
+        if self._hdl is not None:
+            html = self._hdl.render_string(template_name, **kwargs)
+            self.response.write(html)
+
+    def finish(self):
+        """结束"""
+        if self._hdl is not None:
+            self.response.finish(self._hdl)
+
     def on_finish(self):
         self._is_finish = True
+
+
+class ProcessorHandler(web.RequestHandler):
+    """嫁接tornado框架"""
+
+    executor = ThreadPoolExecutor(max_workers=Config.web_thr_count(Config.SETTINGS['pro_thr_num']))
+
+    def initialize(self):
+        request = Request()
+        request.__load_from_tornado__(self.request, self)
+        self._hdl = QuickPythonHandler(Application(), request, self)
+
+    def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
+        pass
+
+    @tornado.gen.coroutine
+    def get(self, *args, **kwargs):
+        self._hdl.request.method = 'GET'
+        yield self._dispose(*args)
+
+    @tornado.gen.coroutine
+    def post(self, *args, **kwargs):
+        self._hdl.request.method = 'POST'
+        yield self._dispose(*args)
+
+    @run_on_executor
+    def _dispose(self, *args):
+        pass
+        logger.info("处理请求")
+        return self._hdl.__dispose__()
+
+    def on_finish(self):
+        self._hdl.on_finish()
