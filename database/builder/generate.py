@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 class GenerateDemo:
 
-    def call(self):
-        """"""
-        self.base()
+    @staticmethod
+    def call(argv):
+        GenerateDemo().base()
 
     def base(self):
         """

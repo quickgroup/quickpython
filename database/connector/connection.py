@@ -44,7 +44,7 @@ class Connection:
         return Connection.ENGINES.get(name)
 
     @staticmethod
-    def connect(name, config=None, re_connect=False) -> Connector:
+    def connect(name=None, config=None, re_connect=False) -> Connector:
         """获取连接，已连接直接返回"""
         if name is None and config is not None and 'name' in config:
             name = config['name']
