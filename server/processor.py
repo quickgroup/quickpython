@@ -42,7 +42,7 @@ class QuickPythonHandler:
         except BaseException as e:
             ret = e
 
-        if ret is not None:
+        if ret is not True:
             self.response_write(ret)
 
         self.finish()
@@ -235,7 +235,7 @@ class QuickPythonHandler:
         self.set_status(status_code)
         # 返回json
         request_type = self.request.headers.get("Content-Type", '').lower()
-        if request_type == 'application/json' or self.request.is_ajax:
+        if request_type == 'application/json' or self.request.is_ajax():
             self.set_header('Content-Type', 'application/json; charset={}'.format(encoding))
             ret = ret if isinstance(ret, Result) else Result.result(status_code, ret, None)
             self.write(str(ret))
@@ -254,6 +254,12 @@ class QuickPythonHandler:
 
     def set_status(self, status):
         self.response.status = status
+
+    def get_cookie(self, k):
+        return self.request.cookies.get(k)
+
+    def set_cookie(self, key, val, max_age=None):
+        self.response.cookies[key] = {'val': val, 'max_age': max_age}
 
     def set_header(self, key, val):
         self.response.set_header(key, val)
@@ -301,8 +307,6 @@ class ProcessorHandler(web.RequestHandler):
 
     @run_on_executor
     def _dispose(self, *args):
-        pass
-        logger.info("处理请求")
         return self._hdl.__dispose__()
 
     def on_finish(self):

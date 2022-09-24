@@ -10,6 +10,7 @@ class Request:
     def __init__(self):
         self.status = 200
         self.headers = {}
+        self.cookies = {}
         self.method = None
         self.path = None
         self.remote_ip = None
@@ -28,15 +29,16 @@ class Request:
         self.path_arr = list(filter(lambda x: len(x) > 0, path_arr))
         # 复制headers
         self.headers = dict(req.headers)
+        self.cookies = dict(req.cookies)
         self.query_arguments = dict(req.query_arguments)
         self.arguments = dict(req.arguments)
         self.body = req.body
         # 解析数据
         params = {}
         for key in req.query_arguments:
-            params[key] = req.get_query_argument(key)
+            params[key] = hdl.get_query_argument(key)
         for key in req.arguments:
-            params[key] = req.get_argument(key)
+            params[key] = hdl.get_argument(key)
 
         # json
         if self.headers.get('content-type', '').find('application/json') > -1:
@@ -70,6 +72,7 @@ class Response:
         self.status = 200
         self.status_msg = None
         self.headers = {}
+        self.cookies = {}
         self.body = None     # 返回内容
 
     def set_header(self, key, val):
@@ -79,7 +82,7 @@ class Response:
         if self.body is None:
             self.body = bytes()
         if isinstance(body, bytes) is False:
-            body = str(body, encoding="utf8")
+            body = bytes(body, encoding="utf8")
         self.body += body
 
     def finish(self, hdl):
@@ -87,6 +90,11 @@ class Response:
         if len(self.headers) > 0:
             for k, v in self.headers.items():
                 hdl.set_header(k, v)
+
+        # 写入 cookie
+        if len(self.cookies) > 0:
+            for k, v in self.cookies.items():
+                hdl.set_cookie(k, v['val'], max_age=v['max_age'])
 
         # 将body写入tornado
         if self.body is not None:
