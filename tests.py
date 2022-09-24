@@ -4,7 +4,7 @@
 import logging
 import time
 
-from quickpython.server.processor import ProcessorHandler
+from quickpython.server.processor import TornadoProcessorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -18,18 +18,18 @@ class Tests:
 
     def test_100(self):
         """测试控制器加载"""
-        ProcessorHandler.load_module()
+        TornadoProcessorHandler.load_module()
 
         path = "index/subjoin/healthReport/index"
-        controller_obj, controller_method = ProcessorHandler.load_controller_action(path, path.split('/'))
+        controller_obj, controller_method = TornadoProcessorHandler.load_controller_action(path, path.split('/'))
         logger.debug("controller_obj={}, controller_method={}".format(controller_obj, controller_method))
 
         path = "index/user/index"
-        controller_obj, controller_method = ProcessorHandler.load_controller_action(path, path.split('/'))
+        controller_obj, controller_method = TornadoProcessorHandler.load_controller_action(path, path.split('/'))
         logger.debug("controller_obj={}, controller_method={}".format(controller_obj, controller_method))
 
         path = "index/signinter/xixunyun/index"
-        controller_obj, controller_method = ProcessorHandler.load_controller_action(path, path.split('/'))
+        controller_obj, controller_method = TornadoProcessorHandler.load_controller_action(path, path.split('/'))
         logger.debug("controller_obj={}, controller_method={}".format(controller_obj, controller_method))
 
     def test_101(self):

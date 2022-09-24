@@ -131,7 +131,6 @@ class QuerySet(object):
 
     def __parse_where_exp(self, logic, field, op, condition, param=None, strict=False):
         logic = logic.upper()
-        param = [] if param is None else param
         where = {}
         # logic
         if logic not in self.__map:
@@ -158,7 +157,7 @@ class QuerySet(object):
                 where[field] = ['null', '']
                 self.__map[logic][field] = where[field]
 
-        elif empty(condition):
+        elif condition is None:
             where[field] = ['=', op]
             self.__map[logic][field] = where[field]
         else:

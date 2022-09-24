@@ -144,7 +144,7 @@ class Connector:
         try:
             sql = sql.strip()
             if Connector.ECHO:
-                log.debug(sql if len(sql) <= 1024 else sql[0:1024])
+                log.info(sql if len(sql) <= 1024 else sql[0:1024])
             return cur.execute(sql)
 
         except SystemExit as e:

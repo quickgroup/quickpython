@@ -33,8 +33,15 @@ class QuickPythonHandler:
         self._is_finish = False
 
     @classmethod
-    def action(cls, path, header=None, data=None):
+    def action(cls, path, headers=None, params=None):
         """本地接口直接调用"""
+        request = Request()
+        request.path = path
+        request.headers = headers
+        request.params = params
+        handler = QuickPythonHandler(Application(), request)
+        handler.__dispose__()
+        return handler.response.body
 
     def __dispose__(self):
         try:
@@ -56,6 +63,7 @@ class QuickPythonHandler:
             self._is_finish = False         # 请求是否结束
             self._is_res_request = False    # 是否是资源请求
             # 请求处理
+            request.parse_path()
             logger.debug("method={}, path={}".format(request.method, request.path))
 
             # 是否是资源文件下载（需要对upload进行鉴权处理
@@ -222,12 +230,12 @@ class QuickPythonHandler:
             except BaseException as e:
                 logger.exception(e)
                 ret = ResponseException("页面异常：{}".format(str(e)), code=500)
-                return HandlerHelper.return_response(self, ret)
+                return HandlerHelper.render_exception_response(self, ret)
 
         elif isinstance(ret, ResponseFileException):
             return HandlerHelper.return_file(self, ret.file, ret.mime)
         elif isinstance(ret, ResponseException):
-            return HandlerHelper.return_response(self, ret)
+            return HandlerHelper.render_exception_response(self, ret)
         elif isinstance(ret, AppException):
             status_code = 500
             ret = str(ret)
@@ -282,7 +290,7 @@ class QuickPythonHandler:
         self._is_finish = True
 
 
-class ProcessorHandler(web.RequestHandler):
+class TornadoProcessorHandler(web.RequestHandler):
     """嫁接tornado框架"""
 
     executor = ThreadPoolExecutor(max_workers=Config.web_thr_count(Config.SETTINGS['pro_thr_num']))

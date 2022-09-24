@@ -23,10 +23,7 @@ class Request:
         self.__target = req
         self.status = hdl.get_status()
         self.remote_ip = req.remote_ip
-        # 路径处理
-        path = self.path = req.path.replace("//", "/")
-        path_arr = [] if path == '/' else path.split('/')
-        self.path_arr = list(filter(lambda x: len(x) > 0, path_arr))
+        self.path = req.path
         # 复制headers
         self.headers = dict(req.headers)
         self.cookies = dict(req.cookies)
@@ -51,6 +48,12 @@ class Request:
                 logger.error(e)
 
         self.params = params
+
+    def parse_path(self):
+        # 路径处理
+        path = self.path.replace("//", "/")
+        path_arr = [] if path == '/' else path.split('/')
+        self.path_arr = list(filter(lambda x: len(x) > 0, path_arr))
 
     def is_post(self):
         return self.method == 'POST'

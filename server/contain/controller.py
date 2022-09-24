@@ -14,7 +14,7 @@ class Controller:
 
     def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
-        self.pro_obj = None         # type:web.processor.ProcessorHandler
+        self.pro_obj = None         # type:web.processor.TornadoProcessorHandler
         self.params = {}            # 请求数据
         assign_data = assign_data = {        # 默认注入参数
             'version': self._version,

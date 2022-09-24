@@ -75,9 +75,9 @@ class Core:
         import quickpython.component.function as functions
         SETTINGS = Config.SETTINGS
         # 路由
-        from .processor import ProcessorHandler
+        from .processor import TornadoProcessorHandler
         ROUTES = [
-            (r"/(.*)", ProcessorHandler),  # 默认处理控制器
+            (r"/(.*)", TornadoProcessorHandler),  # 默认处理控制器
         ]
         try:
             from app.route import ROUTES as APP_ROUTES

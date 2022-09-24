@@ -10,7 +10,7 @@ def mtime():
     return int(time.time())
 
 
-def action(path, header, data):
+def action(path, headers=None, params=None):
     """请求本地服务，通常用于api接口"""
-    from quickpython.server.processor import ProcessorHandler
-    return ProcessorHandler.action(path, header, data)
+    from quickpython.server.processor import QuickPythonHandler
+    return QuickPythonHandler.action(path, headers, params)
