@@ -27,9 +27,9 @@ class HandlerHelper:
         return
 
     @classmethod
-    def render_response(cls, hdl: "web.RequestHandler", e: ResponseException):
+    def render_response(cls, hdl, e: ResponseException):
         hdl.set_status(e.code)
-        if hdl.request.method is None:
+        if hdl.request.is_ajax() or hdl.request.method is None:
             hdl.write(json.dumps(e.__dict__(), ensure_ascii=False))
 
         hdl.render(dispatch_jump_html, **e.__dict__())
