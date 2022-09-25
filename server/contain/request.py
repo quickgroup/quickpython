@@ -38,7 +38,7 @@ class Request:
             params[key] = hdl.get_argument(key)
 
         # json
-        if self.headers.get('content-type', '').find('application/json') > -1:
+        if self.headers.get('content-type', '').lower().find('application/json') > -1:
             try:
                 body = self.body.decode('utf-8')
                 content_params = json.loads(body)

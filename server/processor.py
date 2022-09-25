@@ -33,12 +33,13 @@ class QuickPythonHandler:
         self._is_finish = False
 
     @classmethod
-    def action(cls, path, headers=None, params=None):
+    def action(cls, path, headers=None, params=None, body=None):
         """本地接口直接调用"""
         request = Request()
         request.path = path
         request.headers = headers
         request.params = params
+        request.body = body
         handler = QuickPythonHandler(Application(), request)
         handler.__dispose__()
         return handler.response.body
