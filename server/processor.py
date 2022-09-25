@@ -231,12 +231,12 @@ class QuickPythonHandler:
             except BaseException as e:
                 logger.exception(e)
                 ret = ResponseException("页面异常：{}".format(str(e)), code=500)
-                return HandlerHelper.render_exception_response(self, ret)
+                return HandlerHelper.render_response(self, ret)
 
         elif isinstance(ret, ResponseFileException):
             return HandlerHelper.return_file(self, ret.file, ret.mime)
         elif isinstance(ret, ResponseException):
-            return HandlerHelper.render_exception_response(self, ret)
+            return HandlerHelper.render_response(self, ret)
         elif isinstance(ret, AppException):
             status_code = 500
             ret = str(ret)
