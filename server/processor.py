@@ -95,7 +95,7 @@ class QuickPythonHandler:
             return ResponseException("页面模板异常：{}".format(str(e)), code=500)
         except BaseException as e:
             logging.exception(e)
-            return "系统异常：{}".format(e)
+            return e
         finally:
             if self._is_res_request is False:       # 只记录控制器日志
                 logging.info("{} {} {}ms".format(self.get_status(), self.request.path, int(time.time() * 1000) - self._on_mtime))
@@ -240,11 +240,13 @@ class QuickPythonHandler:
         elif isinstance(ret, AppException):
             status_code = 500
             ret = str(ret)
+        elif isinstance(ret, Exception):
+            status_code = 500
+            ret = str(ret)
 
         self.set_status(status_code)
         # 返回json
-        request_type = self.request.headers.get("Content-Type", '').lower()
-        if request_type == 'application/json' or self.request.is_ajax():
+        if self.request.is_ajax() or self.request.method is None:
             self.set_header('Content-Type', 'application/json; charset={}'.format(encoding))
             ret = ret if isinstance(ret, Result) else Result.result(status_code, ret, None)
             self.write(str(ret))

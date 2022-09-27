@@ -837,3 +837,22 @@ class Calc:
     def floor(val, digits=None):     # 向下取整
         return Calc.digits(Decimal(str(math.floor(val))), digits)
 
+
+class Validation:
+    """验证方法集合"""
+
+    @staticmethod
+    def is_email(txt):
+        if txt is None or len(txt) == 0:
+            return False
+
+        rec = re.compile(r'([\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+)')
+        return len(rec.findall(txt)) > 0
+
+    @staticmethod
+    def is_mobile(txt):
+        if txt is None or len(txt) != 11:
+            return False
+
+        rec = re.compile(r'1\d{10}')
+        return len(rec.findall(txt)) > 0
