@@ -245,6 +245,10 @@ class QuickPythonHandler:
             ret = str(ret)
 
         self.set_status(status_code)
+        # 字节数据直接输出
+        if isinstance(ret, bytes):
+            self.write(ret)
+            return True
         # 返回json
         if self.request.is_ajax() or self.request.method is None:
             self.set_header('Content-Type', 'application/json; charset={}'.format(encoding))

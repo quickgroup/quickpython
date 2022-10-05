@@ -307,12 +307,33 @@ class Utils():
             arr[idx] = int(arr[idx])
         return arr
 
-    # 获取字符串md5
     @staticmethod
     def md5_string(text):
         m = hashlib.md5()
         m.update(str(text).encode())
         return m.hexdigest()
+
+    @staticmethod
+    def md5_file(filename):
+        return Utils.checksum(filename)
+
+    @staticmethod
+    def checksum(filename, hash_factory=hashlib.md5, chunk_num_blocks=128):
+        h = hash_factory()
+        with open(filename, 'rb') as f:
+            for chunk in iter(lambda: f.read(chunk_num_blocks * h.block_size), b''):
+                h.update(chunk)
+        return h.hexdigest()
+
+    @staticmethod
+    def sha256_string(text):
+        m = hashlib.sha256()
+        m.update(str(text).encode())
+        return m.hexdigest()
+
+    @staticmethod
+    def sha256_file(filename):
+        return Utils.checksum(filename, hashlib.sha256)
 
     # 获取url信息
     @staticmethod
@@ -352,7 +373,7 @@ class Utils():
         return False
 
     @staticmethod
-    def datetime_to_timestamp(text:str, format_="%Y-%m-%d %H:%M:%S"):
+    def datetime_to_timestamp(text: str, format_="%Y-%m-%d %H:%M:%S"):
         if text is None:
             return None
         struct_time = time.strptime(str(text), format_)  # 定义格式
@@ -376,6 +397,7 @@ class Utils():
             val = val.date()
         if isinstance(val, datetime.datetime):
             return val.date()
+            return val.date()
         if isinstance(val, datetime.date):
             return val
         from dateutil import parser as dt_parser
@@ -390,6 +412,12 @@ class Utils():
         if extend_mtime:
             return datetime.datetime.now()
         return Utils.parse_datetime(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    @staticmethod
+    def datetime_str(dt=None, format_="%Y-%m-%d %H:%M:%S"):
+        if dt is None:
+            dt = datetime.datetime.now()
+        return dt.strftime(format_)
 
     @staticmethod
     def datetime_day_start_end(curr_dt):

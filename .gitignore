@@ -71,3 +71,5 @@ chromedriver
 .pypirc
 
 .md/
+sh_push.sh
+sh_pull.sh
