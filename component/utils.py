@@ -341,23 +341,37 @@ class Utils():
         info = urlparse(url)
         return info.scheme, info.netloc, info.path
 
-    # 文件存在
     @staticmethod
     def file_exist(file_path):
         return os.path.exists(file_path)
 
+    @staticmethod
+    def dir_exist(dirpath):
+        return os.path.exists(dirpath)
+
     # 文件存在
     @staticmethod
-    def file_del(file_path):
-        if os.path.exists(file_path):
-            os.remove(file_path)
+    def file_del(filename):
+        if os.path.exists(filename):
+            os.remove(filename)
             return True
         return False
 
     # 获取文件mime
     @staticmethod
-    def file_mime(file_path):
-        return mimetypes.guess_type(file_path)[0]
+    def file_mime(filename):
+        return mimetypes.guess_type(filename)[0]
+
+    @staticmethod
+    def rmdir(dirpath):
+        if os.path.isdir(dirpath):
+            for file in os.listdir(dirpath):
+                Utils.rmdir(os.path.join(dirpath, file))
+            if os.path.exists(dirpath):
+                os.rmdir(dirpath)
+        else:
+            if os.path.exists(dirpath):
+                os.remove(dirpath)
     
     # 输入y继续，否则卡住
     @staticmethod
