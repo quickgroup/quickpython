@@ -57,6 +57,8 @@ class Controller:
 
     def render(self, *args, **kwargs):
         args = list(args)
+        if len(args) == 0:
+            args = ["{}.{}".format(self.action, self.tpl_ext), ]
         if args[0].find(self.tpl_ext) > -1:     # type:str
             args[0] = "{}/{}".format(self.controller, args[0])
         else:
