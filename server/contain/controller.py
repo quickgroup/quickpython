@@ -70,8 +70,6 @@ class Controller:
         # return args[0], {**{**self.__assign_data, **kwargs}}
 
     def view(self, *args, **kwargs):
-        if len(args) == 0:
-            args = "{}.{}".format(self.action, self.tpl_ext),
         return self.render(*args, **kwargs)
 
     @staticmethod
