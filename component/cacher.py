@@ -223,9 +223,8 @@ class QPRedisCache(CacherBase):
 
 class QPMemoryCache(CacherBase):
 
-    LOCK_FILE = Config.CACHE_PATH + "/cache.file" + ".lock"
-
     __DATA__ = {}
+    _LOCK = threading.Lock()
 
     @classmethod
     def _load_data(cls):
@@ -243,7 +242,7 @@ class QPMemoryCache(CacherBase):
         return super().ttl(key)
 
     def get(self, key, def_val=None, timeout=CacherBase.TIMEOUT):
-        with FLock(self.LOCK_FILE):
+        with self._LOCK:
             self.__check_overtime__()
             data = self._load_data()
             if key in data:
@@ -263,7 +262,7 @@ class QPMemoryCache(CacherBase):
 
     def set(self, key, val, timeout=CacherBase.TIMEOUT):
         """timeout: 60s"""
-        with FLock(self.LOCK_FILE):
+        with self._LOCK:
             self.__check_overtime__()
             if val is None:
                 return self.delete(key)
@@ -277,7 +276,7 @@ class QPMemoryCache(CacherBase):
             self._write_data(data)
 
     def delete(self, key):
-        with FLock(self.LOCK_FILE):
+        with self._LOCK:
             data = self._load_data()
             if key in data:
                 data.pop(key)
