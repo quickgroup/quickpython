@@ -14,6 +14,7 @@ class Request:
         self.method = None
         self.path = None
         self.remote_ip = None
+        self.host = None
         self.query_arguments = None
         self.arguments = None
         self.__target = None
@@ -23,6 +24,7 @@ class Request:
         self.__target = req
         self.status = hdl.get_status()
         self.remote_ip = req.remote_ip
+        self.host = req.headers.get('host')
         self.path = req.path
         # 复制headers
         self.headers = dict(req.headers)
