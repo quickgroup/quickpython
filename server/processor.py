@@ -142,6 +142,10 @@ class QuickPythonHandler:
                             c_name = cls_name.lower().replace("controller", '')
                             if len(p_name) > 0:
                                 c_name = p_name + "." + c_name
+                            if c_name != c_file.__name__.split(".")[-1]:    # 等于文件名的才是控制器
+                                continue
+                            if c_name in controllers:
+                                raise Exception("控制器已存在：" + c_name + "," + cls_name + "," + c_path + "," + c_file.__file__)
                             controllers[c_name] = {'obj': c_class(), 'm': load_method(c_class)}
 
                 elif os.path.isdir(cls_file_path):
