@@ -33,8 +33,16 @@ class QuickPythonHandler:
         self._is_finish = False
 
     @classmethod
-    def action(cls, path, header=None, data=None):
+    def action(cls, path, headers=None, params=None, body=None):
         """本地接口直接调用"""
+        request = Request()
+        request.path = path
+        request.headers = headers
+        request.params = params
+        request.body = body
+        handler = QuickPythonHandler(Application(), request)
+        handler.__dispose__()
+        return handler.response.body
 
     def __dispose__(self):
         try:
@@ -56,6 +64,7 @@ class QuickPythonHandler:
             self._is_finish = False         # 请求是否结束
             self._is_res_request = False    # 是否是资源请求
             # 请求处理
+            request.parse_path()
             logger.debug("method={}, path={}".format(request.method, request.path))
 
             # 是否是资源文件下载（需要对upload进行鉴权处理
@@ -86,7 +95,7 @@ class QuickPythonHandler:
             return ResponseException("页面模板异常：{}".format(str(e)), code=500)
         except BaseException as e:
             logging.exception(e)
-            return "系统异常：{}".format(e)
+            return e
         finally:
             if self._is_res_request is False:       # 只记录控制器日志
                 logging.info("{} {} {}ms".format(self.get_status(), self.request.path, int(time.time() * 1000) - self._on_mtime))
@@ -133,6 +142,10 @@ class QuickPythonHandler:
                             c_name = cls_name.lower().replace("controller", '')
                             if len(p_name) > 0:
                                 c_name = p_name + "." + c_name
+                            if c_name != c_file.__name__.split(".")[-1]:    # 等于文件名的才是控制器
+                                continue
+                            if c_name in controllers:
+                                raise Exception("控制器已存在：" + c_name + "," + cls_name + "," + c_path + "," + c_file.__file__)
                             controllers[c_name] = {'obj': c_class(), 'm': load_method(c_class)}
 
                 elif os.path.isdir(cls_file_path):
@@ -222,20 +235,26 @@ class QuickPythonHandler:
             except BaseException as e:
                 logger.exception(e)
                 ret = ResponseException("页面异常：{}".format(str(e)), code=500)
-                return HandlerHelper.return_response(self, ret)
+                return HandlerHelper.render_response(self, ret)
 
         elif isinstance(ret, ResponseFileException):
             return HandlerHelper.return_file(self, ret.file, ret.mime)
         elif isinstance(ret, ResponseException):
-            return HandlerHelper.return_response(self, ret)
+            return HandlerHelper.render_response(self, ret)
         elif isinstance(ret, AppException):
+            status_code = 500
+            ret = str(ret)
+        elif isinstance(ret, Exception):
             status_code = 500
             ret = str(ret)
 
         self.set_status(status_code)
+        # 字节数据直接输出
+        if isinstance(ret, bytes):
+            self.write(ret)
+            return True
         # 返回json
-        request_type = self.request.headers.get("Content-Type", '').lower()
-        if request_type == 'application/json' or self.request.is_ajax():
+        if self.request.is_ajax() or self.request.method is None:
             self.set_header('Content-Type', 'application/json; charset={}'.format(encoding))
             ret = ret if isinstance(ret, Result) else Result.result(status_code, ret, None)
             self.write(str(ret))
@@ -282,7 +301,7 @@ class QuickPythonHandler:
         self._is_finish = True
 
 
-class ProcessorHandler(web.RequestHandler):
+class TornadoProcessorHandler(web.RequestHandler):
     """嫁接tornado框架"""
 
     executor = ThreadPoolExecutor(max_workers=Config.web_thr_count(Config.SETTINGS['pro_thr_num']))

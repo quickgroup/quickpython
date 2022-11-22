@@ -307,12 +307,33 @@ class Utils():
             arr[idx] = int(arr[idx])
         return arr
 
-    # 获取字符串md5
     @staticmethod
     def md5_string(text):
         m = hashlib.md5()
         m.update(str(text).encode())
         return m.hexdigest()
+
+    @staticmethod
+    def md5_file(filename):
+        return Utils.checksum(filename)
+
+    @staticmethod
+    def checksum(filename, hash_factory=hashlib.md5, chunk_num_blocks=128):
+        h = hash_factory()
+        with open(filename, 'rb') as f:
+            for chunk in iter(lambda: f.read(chunk_num_blocks * h.block_size), b''):
+                h.update(chunk)
+        return h.hexdigest()
+
+    @staticmethod
+    def sha256_string(text):
+        m = hashlib.sha256()
+        m.update(str(text).encode())
+        return m.hexdigest()
+
+    @staticmethod
+    def sha256_file(filename):
+        return Utils.checksum(filename, hashlib.sha256)
 
     # 获取url信息
     @staticmethod
@@ -320,23 +341,37 @@ class Utils():
         info = urlparse(url)
         return info.scheme, info.netloc, info.path
 
-    # 文件存在
     @staticmethod
     def file_exist(file_path):
         return os.path.exists(file_path)
 
+    @staticmethod
+    def dir_exist(dirpath):
+        return os.path.exists(dirpath)
+
     # 文件存在
     @staticmethod
-    def file_del(file_path):
-        if os.path.exists(file_path):
-            os.remove(file_path)
+    def file_del(filename):
+        if os.path.exists(filename):
+            os.remove(filename)
             return True
         return False
 
     # 获取文件mime
     @staticmethod
-    def file_mime(file_path):
-        return mimetypes.guess_type(file_path)[0]
+    def file_mime(filename):
+        return mimetypes.guess_type(filename)[0]
+
+    @staticmethod
+    def rmdir(dirpath):
+        if os.path.isdir(dirpath):
+            for file in os.listdir(dirpath):
+                Utils.rmdir(os.path.join(dirpath, file))
+            if os.path.exists(dirpath):
+                os.rmdir(dirpath)
+        else:
+            if os.path.exists(dirpath):
+                os.remove(dirpath)
     
     # 输入y继续，否则卡住
     @staticmethod
@@ -352,7 +387,7 @@ class Utils():
         return False
 
     @staticmethod
-    def datetime_to_timestamp(text:str, format_="%Y-%m-%d %H:%M:%S"):
+    def datetime_to_timestamp(text: str, format_="%Y-%m-%d %H:%M:%S"):
         if text is None:
             return None
         struct_time = time.strptime(str(text), format_)  # 定义格式
@@ -376,6 +411,7 @@ class Utils():
             val = val.date()
         if isinstance(val, datetime.datetime):
             return val.date()
+            return val.date()
         if isinstance(val, datetime.date):
             return val
         from dateutil import parser as dt_parser
@@ -390,6 +426,12 @@ class Utils():
         if extend_mtime:
             return datetime.datetime.now()
         return Utils.parse_datetime(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    @staticmethod
+    def datetime_str(dt=None, format_="%Y-%m-%d %H:%M:%S"):
+        if dt is None:
+            dt = datetime.datetime.now()
+        return dt.strftime(format_)
 
     @staticmethod
     def datetime_day_start_end(curr_dt):
@@ -837,3 +879,22 @@ class Calc:
     def floor(val, digits=None):     # 向下取整
         return Calc.digits(Decimal(str(math.floor(val))), digits)
 
+
+class Validation:
+    """验证方法集合"""
+
+    @staticmethod
+    def is_email(txt):
+        if txt is None or len(txt) == 0:
+            return False
+
+        rec = re.compile(r'([\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+)')
+        return len(rec.findall(txt)) > 0
+
+    @staticmethod
+    def is_mobile(txt):
+        if txt is None or len(txt) != 11:
+            return False
+
+        rec = re.compile(r'1\d{10}')
+        return len(rec.findall(txt)) > 0

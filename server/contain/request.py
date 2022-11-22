@@ -14,6 +14,7 @@ class Request:
         self.method = None
         self.path = None
         self.remote_ip = None
+        self.host = None
         self.query_arguments = None
         self.arguments = None
         self.__target = None
@@ -23,10 +24,8 @@ class Request:
         self.__target = req
         self.status = hdl.get_status()
         self.remote_ip = req.remote_ip
-        # 路径处理
-        path = self.path = req.path.replace("//", "/")
-        path_arr = [] if path == '/' else path.split('/')
-        self.path_arr = list(filter(lambda x: len(x) > 0, path_arr))
+        self.host = req.headers.get('host')
+        self.path = req.path
         # 复制headers
         self.headers = dict(req.headers)
         self.cookies = dict(req.cookies)
@@ -41,7 +40,7 @@ class Request:
             params[key] = hdl.get_argument(key)
 
         # json
-        if self.headers.get('content-type', '').find('application/json') > -1:
+        if self.headers.get('content-type', '').lower().find('application/json') > -1:
             try:
                 body = self.body.decode('utf-8')
                 content_params = json.loads(body)
@@ -51,6 +50,12 @@ class Request:
                 logger.error(e)
 
         self.params = params
+
+    def parse_path(self):
+        # 路径处理
+        path = self.path.replace("//", "/")
+        path_arr = [] if path == '/' else path.split('/')
+        self.path_arr = list(filter(lambda x: len(x) > 0, path_arr))
 
     def is_post(self):
         return self.method == 'POST'

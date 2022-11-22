@@ -14,7 +14,7 @@ class Controller:
 
     def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
-        self.pro_obj = None         # type:web.processor.ProcessorHandler
+        self.pro_obj = None         # type:web.processor.TornadoProcessorHandler
         self.params = {}            # 请求数据
         assign_data = assign_data = {        # 默认注入参数
             'version': self._version,
@@ -57,6 +57,8 @@ class Controller:
 
     def render(self, *args, **kwargs):
         args = list(args)
+        if len(args) == 0:
+            args = ["{}.{}".format(self.action, self.tpl_ext), ]
         if args[0].find(self.tpl_ext) > -1:     # type:str
             args[0] = "{}/{}".format(self.controller, args[0])
         else:
@@ -68,8 +70,6 @@ class Controller:
         # return args[0], {**{**self.__assign_data, **kwargs}}
 
     def view(self, *args, **kwargs):
-        if len(args) == 0:
-            args = "{}.{}".format(self.action, self.tpl_ext),
         return self.render(*args, **kwargs)
 
     @staticmethod

@@ -121,17 +121,20 @@ class QuerySet(object):
         table_name = "{} {}".format(format_field(self.__table__), format_field(self.__table))
         return table_name
 
+    def where_raw(self, logic, field):
+        self.__parse_where_exp(logic, field, op=None, condition=None)
+        return self
+
     def where(self, field, op=None, condition=None):
         self.__parse_where_exp("AND", field, op, condition)
         return self
 
-    def where_raw(self, field):
-        self.__parse_where_exp("AND", field, op=None, condition=None)
+    def where_or(self, field):
+        self.__parse_where_exp("OR", field, op=None, condition=None)
         return self
 
     def __parse_where_exp(self, logic, field, op, condition, param=None, strict=False):
         logic = logic.upper()
-        param = [] if param is None else param
         where = {}
         # logic
         if logic not in self.__map:
@@ -158,7 +161,7 @@ class QuerySet(object):
                 where[field] = ['null', '']
                 self.__map[logic][field] = where[field]
 
-        elif empty(condition):
+        elif condition is None:
             where[field] = ['=', op]
             self.__map[logic][field] = where[field]
         else:

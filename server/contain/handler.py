@@ -27,17 +27,13 @@ class HandlerHelper:
         return
 
     @classmethod
-    def return_response(cls, hdl: "web.RequestHandler", e: ResponseException):
-        cls.return_response_code(hdl, e)
-        if 200 <= e.code < 300 or (e.code == 1 or e.code == 2):
-            hdl.render(dispatch_jump_html, **e.__dict__())
-        else:       # 异常
-            hdl.render(dispatch_jump_html, **e.__dict__())
-        return True
-
-    @classmethod
-    def return_response_code(cls, hdl: "web.RequestHandler", e: ResponseException):
+    def render_response(cls, hdl, e: ResponseException):
         hdl.set_status(e.code)
+        if hdl.request.is_ajax() or hdl.request.method is None:
+            hdl.write(json.dumps(e.__dict__(), ensure_ascii=False))
+
+        hdl.render(dispatch_jump_html, **e.__dict__())
+        return True
 
     @classmethod
     def return_file(cls, hdl, path, mime=None):
