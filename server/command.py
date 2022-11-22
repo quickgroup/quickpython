@@ -62,9 +62,10 @@ class ComponentManager:
         app_path = Config.APP_PATH.replace(Config.ROOT_PATH + "/", '')
         cmd_path = str(app_path + "/event").replace("\\", ".").replace(r"/", ".")
         app_cmd = importlib.import_module(cmd_path)
-        # hooker
+        # 启动hooker
         hooker.start()
-        # 定时器
+        hooker.send(hooker.APP_INIT)
+        # 启动定时器
         if Scheduler_INSTALL_DPS:
             scheduler = Scheduler.instance()
             app_crontab = importlib.import_module("{}.crontab".format(app_dir))
@@ -78,7 +79,9 @@ class ComponentManager:
 
     @staticmethod
     def app_stop():
+        # 停止hooker
         hooker.send(hooker.EXIT)
         hooker.stop()
+        # 停止定时器
         if Scheduler_INSTALL_DPS:
             Scheduler.instance().stop()

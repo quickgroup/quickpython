@@ -117,18 +117,19 @@ class Config:
 
     @classmethod
     def init(cls, mode):
+        """cls上的属性可以被子类覆盖，直接调用父类不会覆盖"""
         cls.MODE = str(mode).upper()
         env.set('mode', cls.MODE)
-        cls.dirs_init()
-        LoggingManger.init(env, LOG_DIR, cls.MODE, cls.DEBUG)
-
-    @classmethod
-    def dirs_init(cls):
+        # 主要配置
+        for key in cls.SETTINGS:
+            env.set(key, cls.SETTINGS.get(key))
+        # 目录初始化
         DIRS = [CACHE_PATH, LOG_DIR, DATA_PATH, UPLOADS_PATH]
         for it in DIRS:
             if os.path.exists(it) is False:
-                logger.info('创建目录：{}'.format(it))
                 os.makedirs(it)
+        # 日志初始化
+        LoggingManger.init(env, LOG_DIR, cls.MODE, cls.DEBUG)
 
     @staticmethod
     def get(key, def_val=None):

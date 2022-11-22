@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 class HookerBase:
 
     # 事件
-    APP_START = 'APP_START' # 应用启动
+    APP_INIT = 'APP_INIT'   # 应用初始化完成
     EXIT = 'EXIT'           # 程序退出
     SEND_EMS = 'SEND_EMS'       # 发送邮件
     SEND_SMS = 'SEND_SMS'       # 发送短信

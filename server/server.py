@@ -3,6 +3,7 @@ import tornado.ioloop
 import tornado.web
 from .command import CommandManager, ComponentManager
 from quickpython.server import Config
+from quickpython.component.hooker import hooker
 
 
 class Core:
@@ -59,7 +60,7 @@ class Core:
         cls._app_init(Config.MODE_CMD)
         cls._cmd_signal_init()
         cls.log.info("App cmd start, argv={}".format(argv))
-        # ComponentManager.start()      # cmd环境不启动定时器
+        # ComponentManager.start()      # cmd环境不启动定时器，只在web模式启动定时器
         CommandManager.call(argv)       # 命令行处理
         cls._app_stop()     # 应用结束
 
